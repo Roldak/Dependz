@@ -125,7 +125,7 @@ class Introduction(DependzNode):
 
     @langkit_property(public=True, return_type=T.Definition.entity)
     def definition():
-        return Self.children_env.get_first(No(Symbol)).cast(T.Definition)
+        return Self.children_env.get_first('__definition').cast(T.Definition)
 
     env_spec = EnvSpec(
         add_to_env_kv(Self.ident.sym, Self),
@@ -143,7 +143,7 @@ class Definition(DependzNode):
     env_spec = EnvSpec(
         handle_children(),
         add_to_env_kv(
-            Self.ident.sym, Self,
+            '__definition', Self,
             dest_env=Self.ident.intro.children_env
         )
     )

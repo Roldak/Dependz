@@ -1,9 +1,9 @@
 from __future__ import absolute_import, division, print_function
 
-from langkit.dsl import ASTNode, abstract, Field, T
+from langkit.dsl import ASTNode, abstract, Field, T, Bool
 from langkit.envs import EnvSpec, add_env, add_to_env_kv
-from langkit.expressions import Self, Entity, langkit_property
-from langkit.parsers import Grammar, List, Opt, Or, Pick, _
+from langkit.expressions import Self, langkit_property
+from langkit.parsers import Grammar, List, Or
 from language.lexer import dependz_lexer as L
 
 
@@ -20,29 +20,39 @@ class DependzNode(ASTNode):
 
 
 @abstract
-class Term(DependzNode):
+class DefTerm(DependzNode):
+    pass
+
+
+@abstract
+class Term(DefTerm):
     pass
 
 
 class Identifier(Term):
     token_node = True
 
-    @langkit_property(public=True)
+    @langkit_property(public=True, return_type=Bool)
     def is_defining():
         return Self.parent.is_a(T.Introduction)
 
-    @langkit_property(public=True)
+    @langkit_property(public=True, return_type=T.Introduction.entity)
     def intro():
         return Self.node_env.get_first(Self.symbol).cast(T.Introduction)
 
-    @langkit_property(public=True)
+    @langkit_property(public=True, return_type=DefTerm.entity)
     def kind():
         return Self.intro.term
 
 
-class Arrow(Term):
+class Apply(Term):
+    fun = Field(type=Identifier)
+    args = Field(type=Identifier.list)
+
+
+class Arrow(DefTerm):
     lhs = Field(type=Term)
-    rhs = Field(type=Term)
+    rhs = Field(type=DefTerm)
 
 
 class Introduction(DependzNode):
@@ -50,7 +60,7 @@ class Introduction(DependzNode):
     Identifer : Term
     """
     ident = Field(type=Identifier)
-    term = Field(type=Term)
+    term = Field(type=DefTerm)
 
     env_spec = EnvSpec(
         add_to_env_kv(Self.ident.symbol, Self)
@@ -68,9 +78,15 @@ D = dependz_grammar
 
 dependz_grammar.add_rules(
     main_rule=List(D.intro, empty_valid=True, list_cls=Program),
-    intro=Introduction(D.ident, ':', D.term, L.Newlines),
+    intro=Introduction(D.ident, ':', D.defterm, L.Newlines),
+
     ident=Identifier(L.Identifier),
-    term=Or(D.arrow, D.term1),
+
+    term=Or(D.apply, D.term1),
     term1=D.ident,
-    arrow=Arrow(D.term1, '->', D.term)
+    apply=Apply(D.term1, List(D.term1, empty_valid=False)),
+
+    defterm=Or(D.arrow, D.defterm1),
+    defterm1=D.term,
+    arrow=Arrow(D.defterm1, '->', D.defterm)
 )

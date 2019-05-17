@@ -1,5 +1,9 @@
 Nat : Type
 
-Z : Nat 
+Z : Nat
 S : Nat -> Nat
+
+Vec  : Type -> Nat -> Type
+Nil  : Vec t 0
+Cons : t -> Vec t n -> Vec t n
 

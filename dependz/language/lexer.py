@@ -6,7 +6,7 @@ from langkit.lexer import (
 
 
 class Token(LexerToken):
-    Identifier = WithSymbol()
+    Ident = WithSymbol()
 
     Colon = WithText()
     Arrow = WithText()
@@ -27,7 +27,7 @@ dependz_lexer.add_rules(
     (Pattern(r"[\n]+"), Token.Newlines),
     (Pattern(r"#(.?)+"), Token.Comment),
 
-    (Pattern('[a-zA-Z_][a-zA-Z0-9_]*'), Token.Identifier),
+    (Pattern('[a-zA-Z_][a-zA-Z0-9_]*'), Token.Ident),
     (Literal(':'), Token.Colon),
     (Literal('->'), Token.Arrow),
     (Literal('='), Token.Equal),

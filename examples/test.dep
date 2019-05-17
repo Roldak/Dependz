@@ -8,4 +8,4 @@ Nil  : Vec t 0
 Cons : t -> Vec t n -> Vec t (S n)
 
 Add : Nat -> Nat -> Nat
-Add = x y
+Add = \x.\y. x y

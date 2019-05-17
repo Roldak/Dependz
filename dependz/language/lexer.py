@@ -13,6 +13,8 @@ class Token(LexerToken):
     Equal = WithText()
     ParOpen = WithText()
     ParClose = WithText()
+    Backslash = WithText()
+    Dot = WithText()
 
     Comment = WithTrivia()
     Whitespace = WithTrivia()
@@ -32,5 +34,7 @@ dependz_lexer.add_rules(
     (Literal('->'), Token.Arrow),
     (Literal('='), Token.Equal),
     (Literal('('), Token.ParOpen),
-    (Literal(')'), Token.ParClose)
+    (Literal(')'), Token.ParClose),
+    (Literal('\\'), Token.Backslash),
+    (Literal('.'), Token.Dot)
 )

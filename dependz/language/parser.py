@@ -24,7 +24,11 @@ class DependzNode(ASTNode):
 
     @langkit_property(public=True, memoized=True)
     def make_ident(name=T.Symbol):
-        return T.FreshId.new(name=name)
+        return FreshId.new(name=name)
+
+    @langkit_property(public=True, memoized=True)
+    def make_abstraction(id=T.Identifier, rhs=T.Term):
+        return Abstraction.new(ident=id, term=rhs)
 
 
 @abstract
@@ -88,9 +92,19 @@ class Apply(Term):
     lhs = Field(type=Term)
     rhs = Field(type=Term)
 
-    to_string = Property(
+    to_string = Property(String("(").concat(
         Self.lhs.to_string.concat(String(' ')).concat(Self.rhs.to_string)
-    )
+    ).concat(String(")")))
+
+
+@synthetic
+class Abstraction(Term):
+    ident = Field(type=Identifier)
+    term = Field(type=Term)
+
+    to_string = Property(String("(\\").concat(
+        Self.ident.to_string.concat(String('. ')).concat(Self.term.to_string)
+    ).concat(String(")")))
 
 
 class Arrow(DefTerm):
@@ -153,8 +167,9 @@ dependz_grammar.add_rules(
     ident=SourceId(L.Ident),
 
     term=Or(Apply(D.term, D.term1), D.term1),
-    term1=Or(D.ident, D.parens),
-    parens=Pick('(', D.term, ')'),
+    term1=Or(D.ident, D.term2),
+    term2=Or(Abstraction('\\', D.ident, '.', D.term), D.term3),
+    term3=Pick('(', D.term, ')'),
 
     defterm=Or(D.arrow, D.defterm1),
     defterm1=D.term,

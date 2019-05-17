@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 from langkit.dsl import ASTNode, abstract, Field, T, Bool
 from langkit.envs import EnvSpec, add_env, add_to_env_kv
 from langkit.expressions import Self, langkit_property
-from langkit.parsers import Grammar, List, Or
+from langkit.parsers import Grammar, List, Or, Pick
 from language.lexer import dependz_lexer as L
 
 
@@ -46,8 +46,8 @@ class Identifier(Term):
 
 
 class Apply(Term):
-    fun = Field(type=Identifier)
-    args = Field(type=Identifier.list)
+    fun = Field(type=Term)
+    args = Field(type=Term.list)
 
 
 class Arrow(DefTerm):
@@ -83,8 +83,9 @@ dependz_grammar.add_rules(
     ident=Identifier(L.Identifier),
 
     term=Or(D.apply, D.term1),
-    term1=D.ident,
+    term1=Or(D.ident, D.parens),
     apply=Apply(D.term1, List(D.term1, empty_valid=False)),
+    parens=Pick('(', D.term, ')'),
 
     defterm=Or(D.arrow, D.defterm1),
     defterm1=D.term,

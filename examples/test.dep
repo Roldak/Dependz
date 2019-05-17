@@ -5,5 +5,5 @@ S : Nat -> Nat
 
 Vec  : Type -> Nat -> Type
 Nil  : Vec t 0
-Cons : t -> Vec t n -> Vec t n
+Cons : t -> Vec t n -> Vec t (S n)
 

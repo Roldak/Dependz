@@ -4,7 +4,7 @@ from langkit.dsl import (
     ASTNode, abstract, Field, T, Bool, LexicalEnv, synthetic, Struct,
     UserField, NullField, Symbol
 )
-from langkit.envs import EnvSpec, add_env, add_to_env_kv
+from langkit.envs import EnvSpec, add_env, add_to_env_kv, handle_children
 from langkit.expressions import (
     Self, langkit_property, Property, AbstractProperty, Not, No, If,
     ArrayLiteral, String
@@ -104,17 +104,38 @@ class Arrow(DefTerm):
 
 class Introduction(DependzNode):
     """
-    Identifer : Term
+    Identifer : DefTerm
     """
     ident = Field(type=SourceId)
     term = Field(type=DefTerm)
 
+    @langkit_property(public=True, return_type=T.Definition.entity)
+    def definition():
+        return Self.children_env.get_first(No(Symbol)).cast(T.Definition)
+
     env_spec = EnvSpec(
-        add_to_env_kv(Self.ident.sym, Self)
+        add_to_env_kv(Self.ident.sym, Self),
+        add_env()
     )
 
 
-class Program(Introduction.list):
+class Definition(DependzNode):
+    """
+    Identifier = Term
+    """
+    ident = Field(type=SourceId)
+    term = Field(type=Term)
+
+    env_spec = EnvSpec(
+        handle_children(),
+        add_to_env_kv(
+            Self.ident.sym, Self,
+            dest_env=Self.ident.intro.children_env
+        )
+    )
+
+
+class Program(DependzNode.list):
     env_spec = EnvSpec(
         add_env()
     )
@@ -124,8 +145,10 @@ dependz_grammar = Grammar('main_rule')
 D = dependz_grammar
 
 dependz_grammar.add_rules(
-    main_rule=List(D.intro, empty_valid=True, list_cls=Program),
+    main_rule=List(D.toplevel, empty_valid=True, list_cls=Program),
+    toplevel=Or(D.intro, D.definition),
     intro=Introduction(D.ident, ':', D.defterm, L.Newlines),
+    definition=Definition(D.ident, '=', D.term, L.Newlines),
 
     ident=SourceId(L.Ident),
 

@@ -4,8 +4,30 @@ Z : Nat
 S : Nat -> Nat
 
 Vec  : Type -> Nat -> Type
-Nil  : Vec t 0
+Nil  : Vec t Z
 Cons : t -> Vec t n -> Vec t (S n)
 
-Add : Nat -> Nat -> Nat
-Add = \x.\y. x y
+double : Nat
+double = (\f.\x. f (f x))
+
+succ : Nat
+succ = \n.\f.\x. f (n f x)
+
+zero : Nat
+zero = \f.\x. x
+
+add : Nat
+add = \n.\m. n succ m
+
+one : Nat
+one = succ zero
+
+two : Nat
+two = succ one
+
+three : Nat
+three = succ two
+
+main : Nat
+main = (add two three) (\x. S (S x)) Z
+

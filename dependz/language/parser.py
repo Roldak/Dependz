@@ -35,22 +35,6 @@ class DependzNode(ASTNode):
 class DefTerm(DependzNode):
     to_string = AbstractProperty(public=True, type=T.String)
 
-    @langkit_property(public=True, return_type=T.Identifier.entity.array)
-    def unbound_ids():
-        return Self.collect_ids.filter(lambda i: i.intro.is_null)
-
-    @langkit_property(return_type=T.Identifier.entity.array,
-                      memoized=True)
-    def collect_ids():
-        return Self.match(
-            lambda id=Identifier: id.as_bare_entity.singleton,
-            lambda _: Self.children.mapcat(
-                lambda t: t.cast(DefTerm).then(
-                    lambda dt: dt.collect_ids
-                )
-            )
-        )
-
 
 @abstract
 class Term(DefTerm):
@@ -63,17 +47,9 @@ class Identifier(Term):
 
     to_string = Property(Self.sym.image)
 
-    @langkit_property(public=True, return_type=Bool)
-    def is_defining():
-        return Self.parent.is_a(Introduction)
-
     @langkit_property(public=True, return_type=T.Introduction.entity)
     def intro():
         return Self.node_env.get_first(Self.sym).cast(Introduction)
-
-    @langkit_property(public=True, return_type=DefTerm.entity)
-    def kind():
-        return Self.intro.term
 
 
 @synthetic

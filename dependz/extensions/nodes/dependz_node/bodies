@@ -2,10 +2,12 @@ Fresh_Symbol_Count : Integer := 0;
 
 function P_Fresh_Symbol
   (Node : access Bare_Dependz_Node_Type'Class; Prefix : Symbol_Type)
-   return Symbol_Type is
+   return Symbol_Type
+is
+   Fresh_Count : Wide_Wide_String := Fresh_Symbol_Count'Wide_Wide_Image;
 begin
    Fresh_Symbol_Count := Fresh_Symbol_Count + 1;
    return Lookup_Symbol
      (Node.Unit.Context,
-      Image (Prefix) & "$" & Fresh_Symbol_Count'Wide_Wide_Image);
+      Image (Prefix) & "$" & Fresh_Count (2 .. Fresh_Count'Last));
 end P_Fresh_Symbol;

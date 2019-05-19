@@ -1,0 +1,3 @@
+test_1 = (S (S (S Z)))
+test_2 = (S Z)
+test_3 = (S Z)

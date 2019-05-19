@@ -61,6 +61,10 @@ class Term(DefTerm):
     def substitute(old=T.Symbol, by=T.Symbol):
         pass
 
+    @langkit_property(return_type=T.Term, kind=AbstractKind.abstract)
+    def clone():
+        pass
+
     @langkit_property(return_type=T.Bool, kind=AbstractKind.abstract)
     def contains_symbol(sym=T.Symbol):
         pass
@@ -104,6 +108,10 @@ class Identifier(Term):
         return Self.parent.make_ident(
             If(Self.sym == old, by, Self.sym)
         )
+
+    @langkit_property()
+    def clone():
+        return Self.parent.make_ident(Self.sym)
 
     @langkit_property()
     def contains_symbol(sym=T.Symbol):
@@ -154,6 +162,10 @@ class Apply(Term):
         )
 
     @langkit_property()
+    def clone():
+        return Self.parent.make_apply(Self.lhs.clone, Self.rhs.clone)
+
+    @langkit_property()
     def contains_symbol(sym=T.Symbol):
         return Self.lhs.contains_symbol(sym)._or(Self.rhs.contains_symbol(sym))
 
@@ -192,9 +204,20 @@ class Abstraction(Term):
 
     @langkit_property()
     def substitute(old=T.Symbol, by=T.Symbol):
+        return If(
+            old == Self.ident.sym,
+            Self.clone,
+            Self.parent.make_abstraction(
+                Self.ident.substitute(old, by).cast(Identifier),
+                Self.term.substitute(old, by)
+            )
+        )
+
+    @langkit_property()
+    def clone():
         return Self.parent.make_abstraction(
-            Self.ident.substitute(old, by).cast(Identifier),
-            Self.term.substitute(old, by)
+            Self.ident.clone.cast(Identifier),
+            Self.term.clone
         )
 
     @langkit_property()

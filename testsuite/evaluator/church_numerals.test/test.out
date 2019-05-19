@@ -1,0 +1,3 @@
+test_1 = (F (F (F Z)))
+test_2 = (F (F (F (F (F Z)))))
+test_3 = (F (F (F (F (F (F (F (F (F (F (F (F Z))))))))))))

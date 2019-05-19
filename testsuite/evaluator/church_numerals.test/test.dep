@@ -1,0 +1,35 @@
+Nat : Type
+
+T : Type
+Z : T
+F : T -> T
+
+succ : Nat -> Nat
+succ = \n.\f.\x. f (n f x)
+
+zero : Nat
+zero = \f.\x. x
+
+one : Nat
+one = succ zero
+
+two : Nat
+two = succ one
+
+three : Nat
+three = succ two
+
+add : Nat -> Nat -> Nat
+add = \n.\m. n succ m
+
+double : Nat -> Nat
+double = \n. add n n
+
+test_1 : Nat
+test_1 = three F Z
+
+test_2 : Nat
+test_2 = add two three F Z
+
+test_3 : Nat
+test_3 = double (add three three) F Z

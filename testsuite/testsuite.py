@@ -33,19 +33,22 @@ def runners_for_test(test, runners):
 
 
 def run_test(runner, test, rewrite):
-    out = subprocess.check_output(["python", runner, test])
-    out_file_path = path.join(test, "test.out")
+    try:
+        out = subprocess.check_output(["python", runner, test])
+        out_file_path = path.join(test, "test.out")
 
-    with open(out_file_path, "r") as f:
-        expected_output = f.read()
+        with open(out_file_path, "r") as f:
+            expected_output = f.read()
 
-    if out == expected_output:
-        status = "PASSED"
-    else:
-        status = "FAILED"
-        if rewrite:
-            with open(out_file_path, "w") as f:
-                f.write(out)
+        if out == expected_output:
+            status = "PASSED"
+        else:
+            status = "FAILED"
+            if rewrite:
+                with open(out_file_path, "w") as f:
+                    f.write(out)
+    except subprocess.CalledProcessError:
+        status = "CRASH"
 
     print("{}: {}".format(test[:-5], status))
 

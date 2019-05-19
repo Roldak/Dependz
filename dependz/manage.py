@@ -10,7 +10,7 @@ class Manage(ManageScript):
         from langkit.compile_context import CompileCtx
 
         from language.lexer import dependz_lexer
-        from language.parser import dependz_grammar
+        from language.grammar import dependz_grammar
 
         return CompileCtx(lang_name='Dependz',
                           lexer=dependz_lexer,

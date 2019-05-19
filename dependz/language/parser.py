@@ -30,6 +30,11 @@ class DependzNode(ASTNode):
     def make_abstraction(id=T.Identifier, rhs=T.Term):
         return Abstraction.new(ident=id, term=rhs)
 
+    @langkit_property(external=True, return_type=T.Symbol,
+                      uses_entity_info=False, uses_envs=False)
+    def fresh_symbol(prefix=T.Symbol):
+        pass
+
 
 @abstract
 class DefTerm(DependzNode):

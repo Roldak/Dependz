@@ -2,15 +2,15 @@ Nat : Type
 Z : Nat
 S : Nat -> Nat
 
-Id : T -> T
-Id = \x. x
+id : T -> T
+id = \x. x
 
 test_1 : Nat
 test_1 = S (S (S Z))
 
 test_2 : Nat
-test_2 = Id (S Z)
+test_2 = id (S Z)
 
 test_3 : Nat
-test_3 = (Id S) Z
+test_3 = (id S) Z
 

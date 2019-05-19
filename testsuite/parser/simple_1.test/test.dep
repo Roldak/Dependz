@@ -2,3 +2,7 @@ Nat : Type
 Z : Nat
 S : Nat -> Nat
 
+Add : Nat -> Nat -> Nat
+
+Church_Nat : (A -> A) -> A -> A
+

@@ -24,6 +24,6 @@ dependz_grammar.add_rules(
     term3=Pick('(', D.term, ')'),
 
     defterm=Or(D.arrow, D.defterm1),
-    defterm1=D.term,
+    defterm1=Or(Pick("(", D.defterm, ")"), D.term),
     arrow=Arrow(D.defterm1, '->', D.defterm)
 )

@@ -187,7 +187,7 @@ class Abstraction(Term):
 
 
 class Arrow(DefTerm):
-    lhs = Field(type=Term)
+    lhs = Field(type=DefTerm)
     rhs = Field(type=DefTerm)
 
     to_string = Property(

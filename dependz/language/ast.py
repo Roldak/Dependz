@@ -7,7 +7,7 @@ from langkit.dsl import (
 from langkit.envs import EnvSpec, add_env, add_to_env_kv, handle_children
 from langkit.expressions import (
     Self, Entity, langkit_property, Property, AbstractProperty, Not, No, If,
-    ArrayLiteral, String, Var, AbstractKind, Let
+    ArrayLiteral, String, Var, AbstractKind, Let, CharacterLiteral as Character
 )
 
 
@@ -61,6 +61,10 @@ class Term(DefTerm):
     def substitute(old=T.Symbol, by=T.Symbol):
         pass
 
+    @langkit_property(return_type=T.Bool, kind=AbstractKind.abstract)
+    def contains_symbol(sym=T.Symbol):
+        pass
+
 
 @abstract
 class Identifier(Term):
@@ -100,6 +104,10 @@ class Identifier(Term):
         return Self.parent.make_ident(
             If(Self.sym == old, by, Self.sym)
         )
+
+    @langkit_property()
+    def contains_symbol(sym=T.Symbol):
+        return Self.sym == sym
 
 
 @synthetic
@@ -145,6 +153,10 @@ class Apply(Term):
             Self.rhs.substitute(old, by)
         )
 
+    @langkit_property()
+    def contains_symbol(sym=T.Symbol):
+        return Self.lhs.contains_symbol(sym)._or(Self.rhs.contains_symbol(sym))
+
 
 @synthetic
 class Abstraction(Term):
@@ -185,6 +197,12 @@ class Abstraction(Term):
             Self.term.substitute(old, by)
         )
 
+    @langkit_property()
+    def contains_symbol(sym=T.Symbol):
+        return Self.ident.contains_symbol(sym)._or(
+            Self.term.contains_symbol(sym)
+        )
+
 
 class Arrow(DefTerm):
     lhs = Field(type=DefTerm)
@@ -222,6 +240,23 @@ class Definition(DependzNode):
     @langkit_property(public=True, return_type=T.Term.entity)
     def value():
         return Entity.eval.value
+
+    @langkit_property(public=True, return_type=T.String)
+    def eval_and_print():
+        res = Var(Entity.eval)
+        val_str = Var(res.value.to_string)
+        relevant_ctx = Var(res.context.filter(
+            lambda s: res.value.contains_symbol(s.sym)
+        ))
+        return relevant_ctx.then(
+            lambda ctx: val_str.concat(String(" [")).concat(ctx.mapcat(
+                lambda s:
+                    s.sym.image
+                    .concat(String(" -> "))
+                    .concat(s.actual.to_string)
+            )).concat(String("]")),
+            default_val=val_str
+        )
 
     @langkit_property(return_type=Result, memoized=True)
     def eval():

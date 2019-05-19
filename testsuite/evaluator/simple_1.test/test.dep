@@ -14,3 +14,6 @@ test_2 = id (S Z)
 test_3 : Nat
 test_3 = (id S) Z
 
+test_4 : T -> T
+test_4 = (\f.\x. f x) id
+

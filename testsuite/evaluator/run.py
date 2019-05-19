@@ -17,7 +17,7 @@ def run(src_file):
     assert not u.diagnostics
 
     for d in defs_to_eval(u):
-        r = d.p_value.p_to_string
+        r = d.p_eval_and_print
         print("{} = {}".format(d.f_ident.text, r))
 
 

@@ -19,17 +19,39 @@ two = succ one
 three : Nat
 three = succ two
 
-add : Nat -> Nat -> Nat
-add = \n.\m. n succ m
+four : Nat
+four = succ three
 
-double : Nat -> Nat
-double = \n. add n n
+five : Nat
+five = succ four
 
 test_1 : Nat
 test_1 = three F Z
 
+add : Nat -> Nat -> Nat
+add = \n.\m. n succ m
+
 test_2 : Nat
 test_2 = add two three F Z
 
+double : Nat -> Nat
+double = \n. add n n
+
 test_3 : Nat
 test_3 = double (add three three) F Z
+
+pair : A -> B -> (A -> B -> C) -> C
+pair = \a.\b.\f. f a b
+
+first : A -> B -> A
+first = \p. p (\a.\b. a)
+
+second : A -> B -> B
+second = \p. p (\a.\b. b)
+
+pred : Nat -> Nat
+pred = \n. first (n (\p. pair (second p) (succ (second p))) (pair zero zero))
+
+test_4 : Nat
+test_4 = pred (pred (pred (pred (pred (add five five))))) F Z
+

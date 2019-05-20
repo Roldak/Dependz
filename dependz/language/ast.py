@@ -11,16 +11,6 @@ from langkit.expressions import (
 )
 
 
-class Substitution(Struct):
-    sym = UserField(type=T.Symbol)
-    actual = UserField(type=T.Term.entity)
-
-
-class Result(Struct):
-    value = UserField(type=T.Term.entity)
-    context = UserField(type=T.Substitution.array)
-
-
 @abstract
 class DependzNode(ASTNode):
     """
@@ -51,23 +41,97 @@ class DefTerm(DependzNode):
 
 @abstract
 class Term(DefTerm):
-    @langkit_property(public=False, return_type=T.Result,
-                      kind=AbstractKind.abstract)
-    def eval(ctx=T.Substitution.array):
-        pass
+    @langkit_property(public=True, return_type=T.Term, memoized=False)
+    def eval():
+        return Self.match(
+            lambda id=Identifier: id.intro._.definition.then(
+                lambda d: d.term.node.eval,
+                default_val=id
+            ),
+            lambda ap=Apply: ap.lhs.eval.cast(Abstraction).then(
+                lambda ab: ab.term.substitute(ab.ident.sym, ap.rhs).eval,
+                default_val=ap
+            ),
+            lambda other: other
+        )
 
-    @langkit_property(return_type=T.Term, public=True,
-                      kind=AbstractKind.abstract)
-    def substitute(old=T.Symbol, by=T.Symbol):
-        pass
+    @langkit_property(public=True, return_type=T.Term, memoized=False)
+    def substitute(sym=T.Symbol, val=T.Term):
+        return Self.match(
+            lambda id=Identifier: If(
+                id.sym == sym,
+                val,
+                id
+            ),
+            lambda ap=Apply: ap.parent.make_apply(
+                ap.lhs.substitute(sym, val),
+                ap.rhs.substitute(sym, val)
+            ),
+            lambda ab=Abstraction: If(
+                ab.ident.sym == sym,
+                ab,
+                If(
+                    val.is_free(ab.ident.sym),
+                    ab.fresh_symbol(ab.ident.sym).then(
+                        lambda symp: ab.parent.make_abstraction(
+                            ab.make_ident(symp),
+                            ab.term
+                            .rename(ab.ident.sym, symp)
+                            .substitute(sym, val)
+                        )
+                    ),
+                    ab.parent.make_abstraction(
+                        ab.ident,
+                        ab.term.substitute(sym, val)
+                    )
+                )
 
-    @langkit_property(return_type=T.Term, kind=AbstractKind.abstract)
-    def clone():
-        pass
+            )
+        )
 
-    @langkit_property(return_type=T.Bool, kind=AbstractKind.abstract)
-    def contains_symbol(sym=T.Symbol):
-        pass
+    @langkit_property(public=True, return_type=T.Term, memoized=False)
+    def normalize():
+        return Self.eval.match(
+            lambda id=Identifier: id,
+            lambda ap=Apply: ap.parent.make_apply(
+                ap.lhs.normalize,
+                ap.rhs.normalize
+            ),
+            lambda ab=Abstraction: ab.parent.make_abstraction(
+                ab.ident,
+                ab.term.normalize
+            )
+        )
+
+    @langkit_property(return_type=T.Term, public=True)
+    def rename(old=T.Symbol, by=T.Symbol):
+        return Self.match(
+            lambda id=Identifier: If(
+                id.sym == old,
+                id.parent.make_ident(by),
+                id
+            ),
+            lambda ap=Apply: ap.parent.make_apply(
+                ap.lhs.rename(old, by),
+                ap.rhs.rename(old, by)
+            ),
+            lambda ab=Abstraction: If(
+                old == ab.ident.sym,
+                ab,
+                ab.parent.make_abstraction(
+                    ab.ident,
+                    ab.term.rename(old, by)
+                )
+            )
+        )
+
+    @langkit_property(return_type=T.Bool, public=True)
+    def is_free(sym=T.Symbol):
+        return Self.match(
+            lambda id=Identifier: id.sym == sym,
+            lambda ap=Apply: ap.lhs.is_free(sym) | ap.rhs.is_free(sym),
+            lambda ab=Abstraction: (ab.ident.sym != sym) | ab.term.is_free(sym)
+        )
 
 
 @abstract
@@ -83,39 +147,6 @@ class Identifier(Term):
     @langkit_property(public=True, return_type=T.Introduction.entity)
     def intro():
         return Self.node_env.get_first(Self.sym).cast(Introduction)
-
-    @langkit_property()
-    def eval(ctx=T.Substitution.array):
-        return ctx.find(lambda s: s.sym == Self.sym).then(
-            lambda s: Result.new(
-                value=s.actual,
-                context=ctx
-            ),
-            default_val=Self.intro.definition.then(
-                lambda d: d.eval.then(lambda r: Result.new(
-                    value=r.value,
-                    context=r.context.concat(ctx)
-                )),
-                default_val=Result.new(
-                    value=Entity,
-                    context=ctx
-                )
-            )
-        )
-
-    @langkit_property()
-    def substitute(old=T.Symbol, by=T.Symbol):
-        return Self.parent.make_ident(
-            If(Self.sym == old, by, Self.sym)
-        )
-
-    @langkit_property()
-    def clone():
-        return Self.parent.make_ident(Self.sym)
-
-    @langkit_property()
-    def contains_symbol(sym=T.Symbol):
-        return Self.sym == sym
 
 
 @synthetic
@@ -138,37 +169,6 @@ class Apply(Term):
         Self.lhs.to_string.concat(String(' ')).concat(Self.rhs.to_string)
     ).concat(String(")")))
 
-    @langkit_property()
-    def eval(ctx=T.Substitution.array):
-        evaled_lhs = Var(Entity.lhs.eval(ctx))
-        evaled_rhs = Var(Entity.rhs.eval(evaled_lhs.context))
-
-        return evaled_lhs.value.cast(T.Abstraction).then(
-            lambda abs: abs.apply(evaled_rhs.context, evaled_rhs.value),
-            default_val=Result.new(
-                value=Self.parent.make_apply(
-                    evaled_lhs.value.node,
-                    evaled_rhs.value.node
-                ).as_entity,
-                context=evaled_rhs.context
-            )
-        )
-
-    @langkit_property()
-    def substitute(old=T.Symbol, by=T.Symbol):
-        return Self.parent.make_apply(
-            Self.lhs.substitute(old, by),
-            Self.rhs.substitute(old, by)
-        )
-
-    @langkit_property()
-    def clone():
-        return Self.parent.make_apply(Self.lhs.clone, Self.rhs.clone)
-
-    @langkit_property()
-    def contains_symbol(sym=T.Symbol):
-        return Self.lhs.contains_symbol(sym)._or(Self.rhs.contains_symbol(sym))
-
 
 @synthetic
 class Abstraction(Term):
@@ -178,53 +178,6 @@ class Abstraction(Term):
     to_string = Property(String("(\\").concat(
         Self.ident.to_string.concat(String('. ')).concat(Self.term.to_string)
     ).concat(String(")")))
-
-    @langkit_property()
-    def eval(ctx=T.Substitution.array):
-        return Result.new(
-            value=Entity,
-            context=ctx
-        )
-
-    @langkit_property()
-    def apply(ctx=T.Substitution.array, val=T.Term.entity):
-        fresh_id = Var(Self.fresh_symbol(Self.ident.sym))
-
-        subst = Var(Substitution.new(
-            sym=fresh_id,
-            actual=val
-        ).singleton)
-
-        return (
-            Entity.term
-            .substitute(Self.ident.sym, fresh_id)
-            .as_entity
-            .eval(subst.concat(ctx))
-        )
-
-    @langkit_property()
-    def substitute(old=T.Symbol, by=T.Symbol):
-        return If(
-            old == Self.ident.sym,
-            Self.clone,
-            Self.parent.make_abstraction(
-                Self.ident.substitute(old, by).cast(Identifier),
-                Self.term.substitute(old, by)
-            )
-        )
-
-    @langkit_property()
-    def clone():
-        return Self.parent.make_abstraction(
-            Self.ident.clone.cast(Identifier),
-            Self.term.clone
-        )
-
-    @langkit_property()
-    def contains_symbol(sym=T.Symbol):
-        return Self.ident.contains_symbol(sym)._or(
-            Self.term.contains_symbol(sym)
-        )
 
 
 class Arrow(DefTerm):
@@ -260,30 +213,9 @@ class Definition(DependzNode):
     ident = Field(type=SourceId)
     term = Field(type=Term)
 
-    @langkit_property(public=True, return_type=T.Term.entity)
-    def value():
-        return Entity.eval.value
-
     @langkit_property(public=True, return_type=T.String)
     def eval_and_print():
-        res = Var(Entity.eval)
-        val_str = Var(res.value.to_string)
-        relevant_ctx = Var(res.context.filter(
-            lambda s: res.value.contains_symbol(s.sym)
-        ))
-        return relevant_ctx.then(
-            lambda ctx: val_str.concat(String(" [")).concat(ctx.mapcat(
-                lambda s:
-                    s.sym.image
-                    .concat(String(" -> "))
-                    .concat(s.actual.to_string)
-            )).concat(String("]")),
-            default_val=val_str
-        )
-
-    @langkit_property(return_type=Result, memoized=True)
-    def eval():
-        return Entity.term.eval(No(Substitution.array))
+        return Self.term.normalize.to_string
 
     env_spec = EnvSpec(
         handle_children(),

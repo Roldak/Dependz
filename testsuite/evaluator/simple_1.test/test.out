@@ -1,5 +1,5 @@
 test_1 = (S (S (S Z)))
 test_2 = (S Z)
 test_3 = (S Z)
-test_4 = (\x. (f$2 x)) [f$2 -> (\x. x)]
+test_4 = (\x. x)
 test_5 = (\x. x)

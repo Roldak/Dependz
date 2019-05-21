@@ -1,0 +1,13 @@
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+id : T -> T
+id = \x. x
+
+test_1 : Nat -> Nat
+test_1 = \n. S n
+
+test_2 : Nat -> id Nat
+test_2 = test_1
+

@@ -2,12 +2,12 @@ from __future__ import absolute_import, division, print_function
 
 from langkit.dsl import (
     ASTNode, abstract, Field, T, Bool, LexicalEnv, synthetic, Struct,
-    UserField, NullField, Symbol
+    UserField, NullField, Symbol, LogicVar
 )
 from langkit.envs import EnvSpec, add_env, add_to_env_kv, handle_children
 from langkit.expressions import (
     Self, Entity, langkit_property, Property, AbstractProperty, Not, No, If,
-    ArrayLiteral, String, Var, AbstractKind, Let, CharacterLiteral as Character
+    ArrayLiteral, String, Var, AbstractKind, Let, Bind, LogicTrue, Or, And
 )
 
 
@@ -46,6 +46,44 @@ class DependzNode(ASTNode):
 @abstract
 class DefTerm(DependzNode):
     to_string = AbstractProperty(public=True, type=T.String)
+
+    @langkit_property(return_type=T.DefTerm.entity)
+    def normalized_domain():
+        return Entity.match(
+            lambda t=Term: t.node.normalize,
+            lambda a=Arrow: a.parent.make_arrow(
+                a.lhs.normalized_domain.node,
+                a.rhs.normalized_domain.node
+            )
+        ).as_entity
+
+    @langkit_property(public=True, return_type=T.Bool)
+    def equivalent(other=T.DefTerm.entity):
+        return Entity.match(
+            lambda id=Identifier: other.cast(Identifier).then(
+                lambda o: o.sym == id.sym
+            ),
+            lambda ap=Apply: other.cast(Apply).then(
+                lambda o: And(
+                    ap.lhs.equivalent(o.lhs),
+                    ap.rhs.equivalent(o.rhs)
+                )
+            ),
+            lambda ab=Abstraction: other.cast(Abstraction).then(
+                lambda o: Self.fresh_symbol("eq").then(
+                    lambda sym:
+                    ab.term.rename(ab.ident.sym, sym).as_entity.equivalent(
+                        o.term.rename(o.ident.sym, sym).as_entity
+                    )
+                )
+            ),
+            lambda ar=Arrow: other.cast(Arrow).then(
+                lambda o: And(
+                    ar.lhs.equivalent(o.lhs),
+                    ar.rhs.equivalent(o.rhs)
+                )
+            )
+        )
 
 
 @abstract
@@ -142,6 +180,63 @@ class Term(DefTerm):
             lambda ab=Abstraction: (ab.ident.sym != sym) | ab.term.is_free(sym)
         )
 
+    @langkit_property(return_type=T.LogicVar, memoized=True)
+    def domain_var():
+        return Self.create_logic_var
+
+    @langkit_property(return_type=T.Equation)
+    def bind_occurrences(sym=T.Symbol, dest=T.LogicVar):
+        return Self.match(
+            lambda id=Identifier: If(
+                id.sym == sym,
+                Bind(id.domain_var, dest,
+                     conv_prop=DefTerm.normalized_domain,
+                     eq_prop=DefTerm.equivalent),
+                LogicTrue()
+            ),
+            lambda ap=Apply: And(
+                ap.lhs.bind_occurrences(sym, dest),
+                ap.rhs.bind_occurrences(sym, dest)
+            ),
+            lambda ab=Abstraction: If(
+                ab.ident.sym == sym,
+                LogicTrue(),
+                ab.term.bind_occurrences(sym, dest)
+            )
+        )
+
+    @langkit_property(return_type=T.Equation)
+    def domain_equation():
+        v = Var(Self.domain_var)
+        return Self.match(
+            lambda id=Identifier: id.intro.then(
+                lambda intro: Bind(v, intro.term.normalized_domain,
+                                   conv_prop=DefTerm.normalized_domain,
+                                   eq_prop=DefTerm.equivalent),
+                default_val=LogicTrue()
+            ),
+            lambda ap=Apply: And(
+                ap.lhs.domain_equation,
+                ap.rhs.domain_equation,
+                Bind(ap.lhs.domain_var, ap.rhs.domain_var,
+                     conv_prop=Arrow.param, eq_prop=DefTerm.equivalent),
+                Bind(ap.lhs.domain_var, ap.domain_var,
+                     conv_prop=Arrow.result, eq_prop=DefTerm.equivalent)
+            ),
+            lambda ab=Abstraction: And(
+                ab.term.bind_occurrences(ab.ident.sym, ab.ident.domain_var),
+                Bind(ab.domain_var, ab.ident.domain_var,
+                     conv_prop=Arrow.param, eq_prop=DefTerm.equivalent),
+                Bind(ab.domain_var, ab.term.domain_var,
+                     conv_prop=Arrow.result, eq_prop=DefTerm.equivalent),
+                ab.term.domain_equation
+            )
+        )
+
+    @langkit_property(return_type=T.DefTerm, public=True)
+    def domain():
+        return Self.domain_var.get_value.node.cast_or_raise(DefTerm)
+
 
 @abstract
 class Identifier(Term):
@@ -198,6 +293,14 @@ class Arrow(DefTerm):
         Self.lhs.to_string.concat(String(' -> ')).concat(Self.rhs.to_string)
     )
 
+    @langkit_property(return_type=DefTerm.entity)
+    def param():
+        return Entity.lhs.normalized_domain
+
+    @langkit_property(return_type=DefTerm.entity)
+    def result():
+        return Entity.rhs.normalized_domain
+
 
 class Introduction(DependzNode):
     """
@@ -226,6 +329,15 @@ class Definition(DependzNode):
     @langkit_property(public=True, return_type=T.String)
     def eval_and_print():
         return Self.term.normalize.to_string
+
+    @langkit_property(public=True, return_type=T.Bool)
+    def check_domains():
+        domain_eq = And(
+            Bind(Self.term.domain_var,
+                 Self.ident.intro.term.normalized_domain),
+            Self.term.domain_equation
+        )
+        return domain_eq.solve
 
     env_spec = EnvSpec(
         handle_children(),

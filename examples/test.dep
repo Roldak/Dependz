@@ -1,45 +1,10 @@
 Nat : Type
-
-T : Type
-Z : T
-F : T -> T
+Z : Nat
+S : Nat -> Nat
 
 succ : Nat -> Nat
-succ = \n.\f.\x. f (n f x)
+succ = \n. S n
 
-zero : Nat
-zero = \f.\x. x
-
-one : Nat
-one = succ zero
-
-test_one : Nat
-test_one = succ zero
-
-two : Nat
-two = succ one
-
-three : Nat
-three = succ two
-
-four : Nat
-four = succ three
-
-five : Nat
-five = succ four
-
-test_1 : Nat
-test_1 = three F Z
-
-add : Nat -> Nat -> Nat
-add = \n.\m. n succ m
-
-test_2 : Nat
-test_2 = add two three F Z
-
-double : Nat -> Nat
-double = \n. add n n
-
-test_3 : Nat
-test_3 = double (add three three) F Z
+succ2 : Nat -> Nat
+succ2 = \m. S m
 

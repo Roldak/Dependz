@@ -28,6 +28,10 @@ class DependzNode(ASTNode):
     def make_abstraction(id=T.Identifier, rhs=T.Term):
         return Abstraction.new(ident=id, term=rhs)
 
+    @langkit_property(public=True, memoized=True)
+    def make_arrow(t1=T.DefTerm, t2=T.DefTerm):
+        return Arrow.new(lhs=t1, rhs=t2)
+
     @langkit_property(external=True, return_type=T.Symbol,
                       uses_entity_info=False, uses_envs=False)
     def fresh_symbol(prefix=T.Symbol):
@@ -185,6 +189,7 @@ class Abstraction(Term):
     ).concat(String(")")))
 
 
+@synthetic
 class Arrow(DefTerm):
     lhs = Field(type=DefTerm)
     rhs = Field(type=DefTerm)

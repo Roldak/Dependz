@@ -42,6 +42,12 @@ class DependzNode(ASTNode):
     def create_logic_var():
         pass
 
+    @langkit_property(public=True, external=True, return_type=T.Bool,
+                      uses_entity_info=False, uses_envs=False)
+    def set_logic_equation_debug_mode(mode=T.Int):
+        pass
+
+
 
 @abstract
 class DefTerm(DependzNode):

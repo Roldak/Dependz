@@ -33,6 +33,11 @@ class DependzNode(ASTNode):
     def fresh_symbol(prefix=T.Symbol):
         pass
 
+    @langkit_property(external=True, return_type=T.LogicVar,
+                      uses_entity_info=False, uses_envs=False)
+    def create_logic_var():
+        pass
+
 
 @abstract
 class DefTerm(DependzNode):

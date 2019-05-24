@@ -64,8 +64,12 @@ class DefTerm(DependzNode):
         ).as_entity
 
     @langkit_property(public=True, return_type=T.Bool)
-    def equivalent(other=T.DefTerm.entity):
-        return Entity.match(
+    def equivalent_entities(other=T.DefTerm.entity):
+        return Entity.node.equivalent(other.node)
+
+    @langkit_property(return_type=T.Bool)
+    def equivalent(other=T.DefTerm):
+        return Self.match(
             lambda id=Identifier: other.cast(Identifier).then(
                 lambda o: o.sym == id.sym
             ),
@@ -77,9 +81,8 @@ class DefTerm(DependzNode):
             ),
             lambda ab=Abstraction: other.cast(Abstraction).then(
                 lambda o: Self.fresh_symbol("eq").then(
-                    lambda sym:
-                    ab.term.rename(ab.ident.sym, sym).as_entity.equivalent(
-                        o.term.rename(o.ident.sym, sym).as_entity
+                    lambda sym: ab.term.rename(ab.ident.sym, sym).equivalent(
+                        o.term.rename(o.ident.sym, sym)
                     )
                 )
             ),
@@ -197,7 +200,7 @@ class Term(DefTerm):
                 id.sym == sym,
                 Bind(id.domain_var, dest,
                      conv_prop=DefTerm.normalized_domain,
-                     eq_prop=DefTerm.equivalent),
+                     eq_prop=DefTerm.equivalent_entities),
                 LogicTrue()
             ),
             lambda ap=Apply: And(
@@ -216,25 +219,31 @@ class Term(DefTerm):
         v = Var(Self.domain_var)
         return Self.match(
             lambda id=Identifier: id.intro.then(
-                lambda intro: Bind(v, intro.term.normalized_domain,
-                                   conv_prop=DefTerm.normalized_domain,
-                                   eq_prop=DefTerm.equivalent),
+                lambda intro: Bind(
+                    v, intro.term.normalized_domain,
+                    conv_prop=DefTerm.normalized_domain,
+                    eq_prop=DefTerm.equivalent_entities
+                ),
                 default_val=LogicTrue()
             ),
             lambda ap=Apply: And(
                 ap.lhs.domain_equation,
                 ap.rhs.domain_equation,
                 Bind(ap.lhs.domain_var, ap.rhs.domain_var,
-                     conv_prop=Arrow.param, eq_prop=DefTerm.equivalent),
+                     conv_prop=Arrow.param,
+                     eq_prop=DefTerm.equivalent_entities),
                 Bind(ap.lhs.domain_var, ap.domain_var,
-                     conv_prop=Arrow.result, eq_prop=DefTerm.equivalent)
+                     conv_prop=Arrow.result,
+                     eq_prop=DefTerm.equivalent_entities)
             ),
             lambda ab=Abstraction: And(
                 ab.term.bind_occurrences(ab.ident.sym, ab.ident.domain_var),
                 Bind(ab.domain_var, ab.ident.domain_var,
-                     conv_prop=Arrow.param, eq_prop=DefTerm.equivalent),
+                     conv_prop=Arrow.param,
+                     eq_prop=DefTerm.equivalent_entities),
                 Bind(ab.domain_var, ab.term.domain_var,
-                     conv_prop=Arrow.result, eq_prop=DefTerm.equivalent),
+                     conv_prop=Arrow.result,
+                     eq_prop=DefTerm.equivalent_entities),
                 ab.term.domain_equation
             )
         )

@@ -7,7 +7,8 @@ from langkit.dsl import (
 from langkit.envs import EnvSpec, add_env, add_to_env_kv, handle_children
 from langkit.expressions import (
     Self, Entity, langkit_property, Property, AbstractProperty, Not, No, If,
-    ArrayLiteral, String, Var, AbstractKind, Let, Bind, LogicTrue, Or, And
+    ArrayLiteral, String, Var, AbstractKind, Let, Bind, LogicTrue, LogicFalse,
+    Or, And, PropertyError, ignore
 )
 
 
@@ -48,6 +49,22 @@ class DependzNode(ASTNode):
         pass
 
 
+class Renaming(Struct):
+    from_symbol = UserField(type=T.Symbol)
+    to_symbol = UserField(type=T.Symbol)
+
+
+class UnifyEquation(Struct):
+    eq = UserField(type=T.Equation)
+    renamings = UserField(type=Renaming.array)
+
+
+@synthetic
+class LogicVarArray(DependzNode):
+    @langkit_property(return_type=T.LogicVar, memoized=True)
+    def elem(idx=T.Int):
+        return Self.create_logic_var
+
 
 @abstract
 class DefTerm(DependzNode):
@@ -62,6 +79,16 @@ class DefTerm(DependzNode):
                 a.rhs.normalized_domain.node
             )
         ).as_entity
+
+    @langkit_property(return_type=T.DefTerm, public=True)
+    def renamed_domain(old=T.Symbol, by=T.Symbol):
+        return Self.match(
+            lambda t=Term: t.rename(old, by),
+            lambda ar=Arrow: Self.parent.make_arrow(
+                ar.lhs.renamed_domain(old, by),
+                ar.rhs.renamed_domain(old, by)
+            )
+        )
 
     @langkit_property(public=True, return_type=T.Bool)
     def equivalent_entities(other=T.DefTerm.entity):
@@ -92,6 +119,145 @@ class DefTerm(DependzNode):
                     ar.rhs.equivalent(o.rhs)
                 )
             )
+        )
+
+    @langkit_property(return_type=UnifyEquation, uses_entity_info=False)
+    def unify_equation(other=T.DefTerm,
+                       symbols=T.Symbol.array,
+                       vars=LogicVarArray):
+
+        def index_of(symbol, then, els):
+            return Let(lambda sym=symbol: symbols.filtermap(
+                lambda i, e: i,
+                lambda e: e == sym
+            ).then(
+                lambda x: Let(lambda idx=x.at(0): then(idx)),
+                default_val=els
+            ))
+
+        def to_logic(bool):
+            return If(bool, LogicTrue(), LogicFalse())
+
+        def combine(lhs, other_lhs, rhs, other_rhs):
+            return Let(
+                lambda
+                e1=lhs.unify_equation(other_lhs, symbols, vars),
+                e2=rhs.unify_equation(other_rhs, symbols, vars):
+
+                UnifyEquation.new(
+                    eq=And(e1.eq, e2.eq),
+                    renamings=e1.renamings.concat(e2.renamings)
+                )
+            )
+
+        def unify_case(expected_type, then):
+            return other.cast(expected_type).then(
+                then,
+                default_val=UnifyEquation.new(
+                    eq=other.cast(Identifier).then(
+                        lambda oid: index_of(
+                            oid.sym,
+                            lambda idx: Bind(
+                                vars.elem(idx), Self.as_bare_entity,
+                                eq_prop=DefTerm.equivalent_entities
+                            ),
+                            LogicFalse()
+                        ),
+                        default_val=LogicFalse()
+                    ),
+                    renamings=No(Renaming.array)
+                )
+            )
+
+        return Self.match(
+            lambda id=Identifier: UnifyEquation.new(
+                eq=index_of(
+                    id.sym,
+                    lambda idx: other.cast(Identifier).then(
+                        lambda oid: index_of(
+                            oid.sym,
+                            lambda idx2: Bind(
+                                vars.elem(idx), vars.elem(idx2),
+                                eq_prop=DefTerm.equivalent_entities
+                            ),
+                            Bind(vars.elem(idx), other.as_bare_entity,
+                                 eq_prop=DefTerm.equivalent_entities)
+                        ),
+                        default_val=Bind(vars.elem(idx), other.as_bare_entity,
+                                         eq_prop=DefTerm.equivalent_entities)
+                    ),
+                    to_logic(id.equivalent(other))
+                ),
+                renamings=No(Renaming.array)
+            ),
+
+            lambda ab=Abstraction: unify_case(
+                Abstraction,
+                lambda o: Let(
+                    lambda sym=Self.fresh_symbol("eq"): Let(
+                        lambda
+                        rab=ab.term.rename(ab.ident.sym, sym),
+                        rob=o.term.rename(o.ident.sym, sym): Let(
+                            lambda r=rab.unify_equation(rob, symbols, vars):
+                            UnifyEquation.new(
+                                eq=r.eq,
+                                renamings=r.renamings.concat(Renaming.new(
+                                    from_symbol=sym,
+                                    to_symbol=ab.ident.sym
+                                ).singleton)
+                            )
+                        )
+                    )
+                )
+            ),
+
+            lambda ap=Apply: unify_case(
+                Apply,
+                lambda oap: combine(
+                    ap.lhs, oap.lhs,
+                    ap.rhs, oap.rhs
+                )
+            ),
+
+            lambda ar=Arrow: unify_case(
+                Arrow,
+                lambda oar: combine(
+                    ar.lhs, oar.lhs,
+                    ar.rhs, oar.rhs
+                )
+            )
+        )
+
+    @langkit_property(return_type=LogicVarArray, memoized=True)
+    def make_logic_var_array():
+        return LogicVarArray.new()
+
+    @langkit_property(return_type=T.DefTerm)
+    def rename_all(renamings=Renaming.array, idx=(T.Int, 0)):
+        return renamings.at(idx).then(
+            lambda r:
+            Self.renamed_domain(r.from_symbol, r.to_symbol).rename_all(
+                renamings, idx + 1
+            ),
+            default_val=Self
+        )
+
+    @langkit_property(public=True, return_type=T.DefTerm.entity.array)
+    def unify(other=T.DefTerm, symbols=T.Symbol.array):
+        vars = Var(Self.make_logic_var_array)
+        unify_eq = Var(Self.unify_equation(
+            other,
+            symbols,
+            vars
+        ))
+        return If(
+            unify_eq.eq.solve,
+            symbols.map(
+                lambda i, _: vars.elem(i).get_value.cast(DefTerm).rename_all(
+                    unify_eq.renamings
+                ).as_bare_entity
+            ),
+            PropertyError(T.DefTerm.entity.array, "Unification failed")
         )
 
 

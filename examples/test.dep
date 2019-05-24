@@ -2,6 +2,11 @@ Nat : Type
 Z : Nat
 S : Nat -> Nat
 
+Vec : Nat -> Type
+Nil : Vec Z
+Cons : \f.\x. f n
+Lol : \f.\y. f y
+
 succ : Nat -> Nat
 succ = \n. S n
 

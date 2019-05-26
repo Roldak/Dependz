@@ -34,7 +34,9 @@ def runners_for_test(test, runners):
 
 def run_test(runner, test, rewrite):
     try:
-        out = subprocess.check_output(["python", runner, test])
+        out = subprocess.check_output(["python", runner, test]).replace(
+            '\r', ''
+        )
         out_file_path = path.join(test, "test.out")
 
         with open(out_file_path, "r") as f:

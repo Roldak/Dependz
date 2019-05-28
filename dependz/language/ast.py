@@ -69,11 +69,6 @@ class Binding(Struct):
     domain_val = UserField(type=T.DefTerm)
 
 
-class InstantiationResult(Struct):
-    domain_val = UserField(type=T.DefTerm)
-    bindings = UserField(type=Binding.array)
-
-
 class UnifyEquation(Struct):
     eq = UserField(type=T.Equation)
     renamings = UserField(type=Renaming.array)
@@ -549,82 +544,78 @@ class Term(DefTerm):
             default_val=result
         )
 
-    @langkit_property(public=True, return_type=InstantiationResult)
+    @langkit_property(public=True, return_type=Binding.array)
     def instantiate_templates(templates=Template.array,
                               formals=T.Symbol.array):
-        def make_binding(t, d):
-            return Let(lambda term=t, domain=d: If(
-                term.domain_val.is_null,
-                Binding.new(
-                    target=term,
-                    domain_val=domain
-                ).singleton,
-                No(Binding.array)
-            ))
+        def make_binding(term, domain):
+            return Binding.new(
+                target=term,
+                domain_val=domain
+            )
 
         templated_result = Var(Self.match(
-            lambda id=Identifier:
-            templates.find(lambda t: t.origin == id).then(
-                lambda t: InstantiationResult.new(
-                    domain_val=t.instance,
-                    bindings=No(Binding.array)
+            lambda id=Identifier: make_binding(
+                id,
+                templates.find(lambda t: t.origin == id).then(
+                    lambda t: t.instance,
+                    default_val=id.domain_val
                 )
-            ),
+            ).singleton,
 
             lambda ap=Apply: Let(
                 lambda
                 lhs_res=ap.lhs.instantiate_templates(templates, formals),
                 rhs_res=ap.rhs.instantiate_templates(templates, formals):
 
-                Let(lambda
-
-                    a=lhs_res.domain_val.to_string, b=rhs_res.domain_val.to_string,
-                    substs=lhs_res.domain_val.cast(Arrow).lhs.unify(
-                    rhs_res.domain_val, formals
-                ): Let(
+                Let(
                     lambda
-                    lhs_dom=lhs_res.domain_val.substitute_all(substs),
-                    rhs_dom=rhs_res.domain_val.substitute_all(substs):
+                    substs=lhs_res.at(0).domain_val.cast(Arrow).lhs.unify(
+                        rhs_res.at(0).domain_val, formals
+                    ):
 
-                    InstantiationResult.new(
-                        domain_val=lhs_dom.cast_or_raise(Arrow).rhs,
-                        bindings=make_binding(ap.lhs, lhs_dom).concat(
-                            make_binding(ap.rhs, rhs_dom)
-                        ).concat(
-                            lhs_res.bindings.concat(rhs_res.bindings).map(
-                                lambda b: Binding.new(
-                                    target=b.target,
-                                    domain_val=b.domain_val.substitute_all(
-                                        substs
-                                    )
-                                )
+                    Let(
+                        lambda
+                        new_bindings=lhs_res.concat(rhs_res).map(
+                            lambda b: make_binding(
+                                b.target,
+                                b.domain_val.substitute_all(substs)
                             )
-                        )
+                        ):
+
+                        make_binding(
+                            ap,
+                            new_bindings.at(0).domain_val.cast_or_raise(Arrow)
+                            .rhs
+                        ).singleton.concat(new_bindings)
                     )
-                ))
+                )
             ),
 
             lambda ab=Abstraction: Let(
                 lambda
                 term_res=ab.term.instantiate_templates(templates, formals):
 
-                InstantiationResult.new(
-                    domain_val=Self.parent.make_arrow(
+                make_binding(
+                    ab,
+                    Self.parent.make_arrow(
                         ab.ident.domain_val,
-                        term_res.domain_val
-                    ),
-                    bindings=term_res.bindings
-                )
+                        term_res.at(0).domain_val
+                    )
+                ).singleton.concat(term_res)
             )
         ))
 
         return Self.domain_val.then(
             lambda expected_dom: Let(
-                lambda _=templated_result.domain_val._.unify(
+                lambda substs=templated_result.at(0).domain_val.unify(
                     expected_dom, formals
-                ): InstantiationResult.new(
-                    domain_val=expected_dom,
-                    bindings=templated_result.bindings
+                ): templated_result.map(
+                    lambda b: make_binding(
+                        b.target,
+                        b.domain_val.substitute_all(substs).then(
+                            lambda r: Let(lambda str=r.to_string: r)
+                        )
+                    )
                 )
             ),
             default_val=templated_result
@@ -759,20 +750,20 @@ class Definition(DependzNode):
         return term_eq.templates.then(
             lambda templates: Try(
                 domain_eq.solve,
-                Let(
-                    lambda
-                    instances=templates.map(lambda t: t.intro.as_template(t)):
+                True
+            ).then(lambda _: Let(
+                lambda
+                instances=templates.map(lambda t: t.intro.as_template(t)):
 
-                    Self.term.instantiate_templates(
-                        instances,
-                        instances.mapcat(lambda i: i.instance.free_symbols)
-                    ).then(lambda result: Self.check_domains_internal(
-                        result.bindings.filter(
-                            lambda b: b.domain_val.free_symbols.length == 0
-                        )
-                    ))
-                )
-            ),
+                Self.term.instantiate_templates(
+                    instances,
+                    instances.mapcat(lambda i: i.instance.free_symbols)
+                ).then(lambda result: Self.check_domains_internal(
+                    result.filter(
+                        lambda b: b.domain_val.free_symbols.length == 0
+                    )
+                ))
+            )),
             default_val=domain_eq.solve
         )
 

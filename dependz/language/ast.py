@@ -221,8 +221,17 @@ class DefTerm(DependzNode):
                         default_val=Bind(vars.elem(idx), other.as_bare_entity,
                                          eq_prop=DefTerm.equivalent_entities)
                     ),
-                    Let(lambda a=id.to_string, b=other.to_string:
-                    to_logic(id.equivalent(other)))
+                    other.cast(Identifier).then(
+                        lambda oid: index_of(
+                            oid.sym,
+                            lambda idx: Bind(
+                                vars.elem(idx), Self.as_bare_entity,
+                                eq_prop=DefTerm.equivalent_entities
+                            ),
+                            to_logic(id.equivalent(other))
+                        ),
+                        default_val=LogicFalse()
+                    )
                 ),
                 renamings=No(Renaming.array)
             ),

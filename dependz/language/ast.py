@@ -437,23 +437,23 @@ class Term(DefTerm):
         return Self.create_logic_var
 
     @langkit_property(return_type=T.Equation)
-    def bind_occurrences(sym=T.Symbol, dest=T.LogicVar):
+    def bind_occurrences(sym=T.Symbol, orig=T.LogicVar):
         return Self.match(
             lambda id=Identifier: If(
                 id.sym == sym,
-                Bind(id.domain_var, dest,
+                Bind(orig, id.domain_var,
                      conv_prop=DefTerm.normalized_domain,
                      eq_prop=DefTerm.equivalent_entities),
                 LogicTrue()
             ),
             lambda ap=Apply: And(
-                ap.lhs.bind_occurrences(sym, dest),
-                ap.rhs.bind_occurrences(sym, dest)
+                ap.lhs.bind_occurrences(sym, orig),
+                ap.rhs.bind_occurrences(sym, orig)
             ),
             lambda ab=Abstraction: If(
                 ab.ident.sym == sym,
                 LogicTrue(),
-                ab.term.bind_occurrences(sym, dest)
+                ab.term.bind_occurrences(sym, orig)
             )
         )
 

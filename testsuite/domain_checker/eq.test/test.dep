@@ -1,0 +1,22 @@
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+Vec : Type -> Nat -> Type
+Nil : Vec t Z
+Cons : t -> Vec t n -> Vec t (S n)
+
+One : Nat
+One = S Z
+
+Two : Nat
+Two = S One
+
+Three : Nat
+Three = S Two
+
+Eq : t -> t -> Type
+Refl : Eq x x
+
+test_1 : Eq (S One) Two
+test_1 = Refl

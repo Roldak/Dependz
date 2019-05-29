@@ -1,0 +1,2 @@
+test_1: Success
+  <SourceId test.dep:22:10-22:14>: ((Eq (S (S Z))) (S (S Z)))

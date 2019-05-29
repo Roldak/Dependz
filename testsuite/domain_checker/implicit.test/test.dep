@@ -14,3 +14,6 @@ Two = S One
 
 test_1 : Vec Nat Two
 test_1 = Cons Z (Cons Z Nil)
+
+test_prepend_Z : Vec Nat n -> Vec Nat (S n)
+test_prepend_Z = \x. Cons Z x

@@ -747,6 +747,7 @@ class Definition(DependzNode):
                  Self.ident.intro.term.normalized_domain),
             term_eq.eq
         )
+        self_formals = Self.ident.intro.generic_formals
         return term_eq.templates.then(
             lambda templates: Try(
                 domain_eq.solve,
@@ -760,7 +761,9 @@ class Definition(DependzNode):
                     instances.mapcat(lambda i: i.instance.free_symbols)
                 ).then(lambda result: Self.check_domains_internal(
                     result.filter(
-                        lambda b: b.domain_val.free_symbols.length == 0
+                        lambda b: b.domain_val.free_symbols.all(
+                            lambda sym: self_formals.contains(sym)
+                        )
                     ),
                     tries - 1
                 ))

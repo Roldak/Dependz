@@ -736,11 +736,11 @@ class Definition(DependzNode):
         return Self.term.normalize.to_string
 
     @langkit_property(public=True, return_type=T.Bool)
-    def check_domains():
-        return Self.check_domains_internal(No(Binding.array))
+    def check_domains(tries=(T.Int, -1)):
+        return Self.check_domains_internal(No(Binding.array), tries)
 
     @langkit_property(public=False, return_type=T.Bool)
-    def check_domains_internal(bindings=Binding.array):
+    def check_domains_internal(bindings=Binding.array, tries=T.Int):
         term_eq = Var(Self.term.domain_equation(bindings))
         domain_eq = And(
             Bind(Self.term.domain_var,
@@ -750,7 +750,7 @@ class Definition(DependzNode):
         return term_eq.templates.then(
             lambda templates: Try(
                 domain_eq.solve,
-                True
+                tries != 0
             ).then(lambda _: Let(
                 lambda
                 instances=templates.map(lambda t: t.intro.as_template(t)):
@@ -761,7 +761,8 @@ class Definition(DependzNode):
                 ).then(lambda result: Self.check_domains_internal(
                     result.filter(
                         lambda b: b.domain_val.free_symbols.length == 0
-                    )
+                    ),
+                    tries - 1
                 ))
             )),
             default_val=domain_eq.solve

@@ -8,7 +8,7 @@ from langkit.envs import EnvSpec, add_env, add_to_env_kv, handle_children
 from langkit.expressions import (
     Self, Entity, langkit_property, Property, AbstractProperty, Not, No, If,
     ArrayLiteral, String, Var, AbstractKind, Let, Bind, LogicTrue, LogicFalse,
-    Or, And, PropertyError, ignore, Try
+    Or, And, PropertyError, ignore, Try, Cond
 )
 
 
@@ -54,6 +54,26 @@ class Renaming(Struct):
     to_symbol = UserField(type=T.Symbol)
 
 
+class Substitution(Struct):
+    from_symbol = UserField(type=T.Symbol)
+    to_term = UserField(type=T.DefTerm)
+
+
+class Template(Struct):
+    origin = UserField(type=T.Term)
+    instance = UserField(type=T.DefTerm)
+
+
+class Binding(Struct):
+    target = UserField(type=T.Term)
+    domain_val = UserField(type=T.DefTerm)
+
+
+class InstantiationResult(Struct):
+    domain_val = UserField(type=T.DefTerm)
+    bindings = UserField(type=Binding.array)
+
+
 class UnifyEquation(Struct):
     eq = UserField(type=T.Equation)
     renamings = UserField(type=Renaming.array)
@@ -61,7 +81,7 @@ class UnifyEquation(Struct):
 
 class DomainEquation(Struct):
     eq = UserField(type=T.Equation)
-    incomplete = UserField(type=T.Bool)
+    templates = UserField(type=T.Identifier.array)
 
 
 @synthetic
@@ -92,6 +112,16 @@ class DefTerm(DependzNode):
             lambda ar=Arrow: Self.parent.make_arrow(
                 ar.lhs.renamed_domain(old, by),
                 ar.rhs.renamed_domain(old, by)
+            )
+        )
+
+    @langkit_property(return_type=T.DefTerm, public=True)
+    def substituted_domain(sym=T.Symbol, val=T.DefTerm):
+        return Self.match(
+            lambda t=Term: t.substitute(sym, val.cast_or_raise(Term)),
+            lambda ar=Arrow: Self.parent.make_arrow(
+                ar.lhs.substituted_domain(sym, val),
+                ar.rhs.substituted_domain(sym, val)
             )
         )
 
@@ -191,7 +221,8 @@ class DefTerm(DependzNode):
                         default_val=Bind(vars.elem(idx), other.as_bare_entity,
                                          eq_prop=DefTerm.equivalent_entities)
                     ),
-                    to_logic(id.equivalent(other))
+                    Let(lambda a=id.to_string, b=other.to_string:
+                    to_logic(id.equivalent(other)))
                 ),
                 renamings=No(Renaming.array)
             ),
@@ -202,7 +233,9 @@ class DefTerm(DependzNode):
                     lambda sym=Self.fresh_symbol("eq"): Let(
                         lambda
                         rab=ab.term.rename(ab.ident.sym, sym),
-                        rob=o.term.rename(o.ident.sym, sym): Let(
+                        rob=o.term.rename(o.ident.sym, sym):
+
+                        Let(
                             lambda r=rab.unify_equation(rob, symbols, vars):
                             UnifyEquation.new(
                                 eq=r.eq,
@@ -247,7 +280,17 @@ class DefTerm(DependzNode):
             default_val=Self
         )
 
-    @langkit_property(public=True, return_type=T.DefTerm.entity.array)
+    @langkit_property(return_type=T.DefTerm)
+    def substitute_all(substs=Substitution.array, idx=(T.Int, 0)):
+        return substs.at(idx).then(
+            lambda r:
+            Self.substituted_domain(r.from_symbol, r.to_term).substitute_all(
+                substs, idx + 1
+            ),
+            default_val=Self
+        )
+
+    @langkit_property(public=True, return_type=Substitution.array)
     def unify(other=T.DefTerm, symbols=T.Symbol.array):
         vars = Var(Self.make_logic_var_array)
         unify_eq = Var(Self.unify_equation(
@@ -258,11 +301,14 @@ class DefTerm(DependzNode):
         return If(
             unify_eq.eq.solve,
             symbols.map(
-                lambda i, _: vars.elem(i).get_value.cast(DefTerm).rename_all(
-                    unify_eq.renamings
-                ).as_bare_entity
-            ),
-            PropertyError(T.DefTerm.entity.array, "Unification failed")
+                lambda i, s: Substitution.new(
+                    from_symbol=s,
+                    to_term=vars.elem(i).get_value._.cast(DefTerm).rename_all(
+                        unify_eq.renamings
+                    )
+                )
+            ).filter(lambda s: Not(s.to_term.is_null)),
+            PropertyError(Substitution.array, "Unification failed")
         )
 
     @langkit_property(public=True, return_type=T.Symbol.array)
@@ -305,7 +351,7 @@ class Term(DefTerm):
             lambda other: other
         )
 
-    @langkit_property(public=True, return_type=T.Term, memoized=False)
+    @langkit_property(public=True, return_type=T.Term)
     def substitute(sym=T.Symbol, val=T.Term):
         return Self.match(
             lambda id=Identifier: If(
@@ -407,34 +453,46 @@ class Term(DefTerm):
             )
         )
 
-    @langkit_property(return_type=T.DomainEquation)
-    def domain_equation():
-        return Self.match(
+    @langkit_property(return_type=T.DomainEquation,
+                      uses_entity_info=False)
+    def domain_equation(bindings=Binding.array):
+        relevant_binding = Var(bindings.find(
+            lambda b: b.target == Self
+        ))
+
+        result = Var(Self.match(
             lambda id=Identifier: id.intro.then(
-                lambda intro: If(
+                lambda intro: Cond(
+                    Not(relevant_binding.is_null),
+                    DomainEquation.new(
+                        eq=LogicTrue(),
+                        templates=No(Identifier.array)
+                    ),
+
                     intro.generic_formals.length > 0,
                     DomainEquation.new(
                         eq=LogicTrue(),
-                        incomplete=True
+                        templates=id.singleton
                     ),
+
                     DomainEquation.new(
                         eq=Bind(
                             Self.domain_var, intro.term.normalized_domain,
                             conv_prop=DefTerm.normalized_domain,
                             eq_prop=DefTerm.equivalent_entities
                         ),
-                        incomplete=False
+                        templates=No(Identifier.array)
                     )
                 ),
                 default_val=DomainEquation.new(
                     eq=LogicTrue(),
-                    incomplete=False
+                    templates=No(Identifier.array)
                 )
             ),
             lambda ap=Apply: Let(
                 lambda
-                lhs_eq=ap.lhs.domain_equation,
-                rhs_eq=ap.rhs.domain_equation:
+                lhs_eq=ap.lhs.domain_equation(bindings),
+                rhs_eq=ap.rhs.domain_equation(bindings):
 
                 DomainEquation.new(
                     eq=And(
@@ -447,11 +505,11 @@ class Term(DefTerm):
                              conv_prop=Arrow.result,
                              eq_prop=DefTerm.equivalent_entities)
                     ),
-                    incomplete=lhs_eq.incomplete | rhs_eq.incomplete
+                    templates=lhs_eq.templates.concat(rhs_eq.templates)
                 )
             ),
             lambda ab=Abstraction: Let(
-                lambda term_eq=ab.term.domain_equation:
+                lambda term_eq=ab.term.domain_equation(bindings):
 
                 DomainEquation.new(
                     eq=And(
@@ -466,13 +524,105 @@ class Term(DefTerm):
                              eq_prop=DefTerm.equivalent_entities),
                         term_eq.eq
                     ),
-                    incomplete=term_eq.incomplete
+                    templates=term_eq.templates
                 )
             )
+        ))
+
+        return relevant_binding.then(
+            lambda b: DomainEquation.new(
+                eq=Bind(
+                    Self.domain_var, b.domain_val.as_bare_entity,
+                    eq_prop=DefTerm.equivalent_entities
+                ) & result.eq,
+                templates=result.templates
+            ),
+            default_val=result
+        )
+
+    @langkit_property(public=True, return_type=InstantiationResult)
+    def instantiate_templates(templates=Template.array,
+                              formals=T.Symbol.array):
+        def make_binding(t, d):
+            return Let(lambda term=t, domain=d: If(
+                term.domain_val.is_null,
+                Binding.new(
+                    target=term,
+                    domain_val=domain
+                ).singleton,
+                No(Binding.array)
+            ))
+
+        templated_result = Var(Self.match(
+            lambda id=Identifier:
+            templates.find(lambda t: t.origin == id).then(
+                lambda t: InstantiationResult.new(
+                    domain_val=t.instance,
+                    bindings=No(Binding.array)
+                )
+            ),
+
+            lambda ap=Apply: Let(
+                lambda
+                lhs_res=ap.lhs.instantiate_templates(templates, formals),
+                rhs_res=ap.rhs.instantiate_templates(templates, formals):
+
+                Let(lambda
+
+                    a=lhs_res.domain_val.to_string, b=rhs_res.domain_val.to_string,
+                    substs=lhs_res.domain_val.cast(Arrow).lhs.unify(
+                    rhs_res.domain_val, formals
+                ): Let(
+                    lambda
+                    lhs_dom=lhs_res.domain_val.substitute_all(substs),
+                    rhs_dom=rhs_res.domain_val.substitute_all(substs):
+
+                    InstantiationResult.new(
+                        domain_val=lhs_dom.cast_or_raise(Arrow).rhs,
+                        bindings=make_binding(ap.lhs, lhs_dom).concat(
+                            make_binding(ap.rhs, rhs_dom)
+                        ).concat(
+                            lhs_res.bindings.concat(rhs_res.bindings).map(
+                                lambda b: Binding.new(
+                                    target=b.target,
+                                    domain_val=b.domain_val.substitute_all(
+                                        substs
+                                    )
+                                )
+                            )
+                        )
+                    )
+                ))
+            ),
+
+            lambda ab=Abstraction: Let(
+                lambda
+                term_res=ab.term.instantiate_templates(templates, formals):
+
+                InstantiationResult.new(
+                    domain_val=Self.parent.make_arrow(
+                        ab.ident.domain_val,
+                        term_res.domain_val
+                    ),
+                    bindings=term_res.bindings
+                )
+            )
+        ))
+
+        return Self.domain_val.then(
+            lambda expected_dom: Let(
+                lambda _=templated_result.domain_val._.unify(
+                    expected_dom, formals
+                ): InstantiationResult.new(
+                    domain_val=expected_dom,
+                    bindings=templated_result.bindings
+                )
+            ),
+            default_val=templated_result
         )
 
     @langkit_property(return_type=T.DefTerm, public=True)
-    def domain():
+    def domain_val():
         return Self.domain_var.get_value._.node.cast_or_raise(DefTerm)
 
 
@@ -556,6 +706,18 @@ class Introduction(DependzNode):
     def generic_formals():
         return Self.term.free_symbols
 
+    @langkit_property(public=True, return_type=Template)
+    def as_template(origin_term=T.Term):
+        renamings = Var(Self.generic_formals.map(lambda s: Renaming.new(
+            from_symbol=s,
+            to_symbol=Self.fresh_symbol(s)
+        )))
+        return Template.new(
+            origin=origin_term,
+            instance=Self.term.rename_all(renamings).as_bare_entity
+            .normalized_domain.node,
+        )
+
     env_spec = EnvSpec(
         add_to_env_kv(Self.ident.sym, Self),
         add_env()
@@ -575,17 +737,34 @@ class Definition(DependzNode):
 
     @langkit_property(public=True, return_type=T.Bool)
     def check_domains():
-        term_eq = Var(Self.term.domain_equation)
+        return Self.check_domains_internal(No(Binding.array))
+
+    @langkit_property(public=False, return_type=T.Bool)
+    def check_domains_internal(bindings=Binding.array):
+        term_eq = Var(Self.term.domain_equation(bindings))
         domain_eq = And(
             Bind(Self.term.domain_var,
                  Self.ident.intro.term.normalized_domain),
             term_eq.eq
         )
+        return term_eq.templates.then(
+            lambda templates: Try(
+                domain_eq.solve,
+                Let(
+                    lambda
+                    instances=templates.map(lambda t: t.intro.as_template(t)):
 
-        return If(
-            term_eq.incomplete,
-            Try(domain_eq.solve, True),
-            domain_eq.solve
+                    Self.term.instantiate_templates(
+                        instances,
+                        instances.mapcat(lambda i: i.instance.free_symbols)
+                    ).then(lambda result: Self.check_domains_internal(
+                        result.bindings.filter(
+                            lambda b: b.domain_val.free_symbols.length == 0
+                        )
+                    ))
+                )
+            ),
+            default_val=domain_eq.solve
         )
 
     env_spec = EnvSpec(

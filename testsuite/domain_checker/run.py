@@ -3,6 +3,8 @@ import libdependzlang as ldl
 import os
 import sys
 
+import traceback
+
 
 def defs_to_domain_check(unit):
     return unit.root.findall(
@@ -19,6 +21,8 @@ def run(src_file):
 
     assert not u.diagnostics
 
+    set_debug(True)
+
     for d in defs_to_domain_check(u):
         def_name = d.f_ident.text
 
@@ -28,12 +32,13 @@ def run(src_file):
             print("A crash occurred while domain checking {}.".format(
                 def_name
             ))
+            traceback.print_exc()
             continue
 
         if r:
             print("{}: Success".format(def_name))
             for t in [d.f_term] + d.f_term.findall(ldl.Term):
-                dom = t.p_domain
+                dom = t.p_domain_val
                 print("  {}: {}".format(t, dom.p_to_string if dom else "None"))
         else:
             set_debug(True)

@@ -4,8 +4,10 @@ S : Nat -> Nat
 
 Vec : Nat -> Type
 Nil : Vec Z
-Cons : \f.\x. f n
-Lol : \f.\y. f y
+Cons : Nat -> Vec n -> Vec (S n)
+
+with : Nat -> Vec m -> Vec (S m)
+with = Cons
 
 succ : Nat -> Nat
 succ = \n. S n

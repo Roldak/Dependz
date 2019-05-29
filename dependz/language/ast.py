@@ -18,20 +18,20 @@ class DependzNode(ASTNode):
     Root node class for Dependz AST nodes.
     """
     @langkit_property(public=True, memoized=True)
-    def make_apply(t1=T.Term, t2=T.Term):
-        return Apply.new(lhs=t1, rhs=t2)
-
-    @langkit_property(public=True, memoized=True)
     def make_ident(name=T.Symbol):
         return FreshId.new(name=name)
 
     @langkit_property(public=True, memoized=True)
+    def make_apply(t1=T.Term, t2=T.Term):
+        return SyntheticApply.new(lhs=t1, rhs=t2)
+
+    @langkit_property(public=True, memoized=True)
     def make_abstraction(id=T.Identifier, rhs=T.Term):
-        return Abstraction.new(ident=id, term=rhs)
+        return SyntheticAbstraction.new(ident=id, term=rhs)
 
     @langkit_property(public=True, memoized=True)
     def make_arrow(t1=T.DefTerm, t2=T.DefTerm):
-        return Arrow.new(lhs=t1, rhs=t2)
+        return SyntheticArrow.new(lhs=t1, rhs=t2)
 
     @langkit_property(external=True, return_type=T.Symbol,
                       uses_entity_info=False, uses_envs=False)
@@ -652,7 +652,6 @@ class SourceId(Identifier):
     sym = Property(Self.symbol)
 
 
-@synthetic
 class Apply(Term):
     lhs = Field(type=Term)
     rhs = Field(type=Term)
@@ -663,6 +662,10 @@ class Apply(Term):
 
 
 @synthetic
+class SyntheticApply(Apply):
+    pass
+
+
 class Abstraction(Term):
     ident = Field(type=Identifier)
     term = Field(type=Term)
@@ -673,6 +676,10 @@ class Abstraction(Term):
 
 
 @synthetic
+class SyntheticAbstraction(Abstraction):
+    pass
+
+
 class Arrow(DefTerm):
     lhs = Field(type=DefTerm)
     rhs = Field(type=DefTerm)
@@ -688,6 +695,11 @@ class Arrow(DefTerm):
     @langkit_property(return_type=DefTerm.entity)
     def result():
         return Entity.rhs.normalized_domain
+
+
+@synthetic
+class SyntheticArrow(Arrow):
+    pass
 
 
 class Introduction(DependzNode):

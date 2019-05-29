@@ -21,19 +21,13 @@ def run(src_file):
 
     assert not u.diagnostics
 
-    set_debug(True)
-
     for d in defs_to_domain_check(u):
         def_name = d.f_ident.text
 
         try:
             r = d.p_check_domains()
         except ldl.PropertyError:
-            print("A crash occurred while domain checking {}.".format(
-                def_name
-            ))
-            traceback.print_exc()
-            continue
+            r = False
 
         if r:
             print("{}: Success".format(def_name))
@@ -43,7 +37,15 @@ def run(src_file):
         else:
             set_debug(True)
             print("{} : Failed".format(def_name))
-            d.p_check_domains()
+
+            try:
+                d.p_check_domains()
+            except ldl.PropertyError:
+                print("A crash occurred while domain checking {}.".format(
+                    def_name
+                ))
+                traceback.print_exc()
+
             set_debug(False)
 
 

@@ -24,3 +24,6 @@ id = \x. x
 test_2 : Nat
 test_2 = foo (id Z) Nil
 
+test_3 : m:Nat -> Vec Nat m -> Nat
+test_3 = foo
+

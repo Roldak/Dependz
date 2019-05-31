@@ -730,9 +730,13 @@ class Arrow(DefTerm):
     lhs = Field(type=DefTerm)
     rhs = Field(type=DefTerm)
 
-    to_string = Property(
-        Self.lhs.to_string.concat(String(' -> ')).concat(Self.rhs.to_string)
-    )
+    @langkit_property()
+    def to_string():
+        return Self.binder.then(
+            lambda b: String('(').concat(b.to_string).concat(String(':'))
+            .concat(Self.lhs.to_string).concat(String(')')),
+            default_val=Self.lhs.to_string
+        ).concat(String(' -> ')).concat(Self.rhs.to_string)
 
     @langkit_property(return_type=DefTerm.entity)
     def param():

@@ -12,6 +12,36 @@ from langkit.expressions import (
 )
 
 
+class Renaming(Struct):
+    from_symbol = UserField(type=T.Symbol)
+    to_symbol = UserField(type=T.Symbol)
+
+
+class Substitution(Struct):
+    from_symbol = UserField(type=T.Symbol)
+    to_term = UserField(type=T.DefTerm)
+
+
+class Template(Struct):
+    origin = UserField(type=T.Term)
+    instance = UserField(type=T.DefTerm)
+
+
+class Binding(Struct):
+    target = UserField(type=T.Term)
+    domain_val = UserField(type=T.DefTerm)
+
+
+class UnifyEquation(Struct):
+    eq = UserField(type=T.Equation)
+    renamings = UserField(type=Renaming.array)
+
+
+class DomainEquation(Struct):
+    eq = UserField(type=T.Equation)
+    templates = UserField(type=T.Identifier.array)
+
+
 @abstract
 class DependzNode(ASTNode):
     """
@@ -48,36 +78,6 @@ class DependzNode(ASTNode):
                       uses_entity_info=False, uses_envs=False)
     def set_logic_equation_debug_mode(mode=T.Int):
         pass
-
-
-class Renaming(Struct):
-    from_symbol = UserField(type=T.Symbol)
-    to_symbol = UserField(type=T.Symbol)
-
-
-class Substitution(Struct):
-    from_symbol = UserField(type=T.Symbol)
-    to_term = UserField(type=T.DefTerm)
-
-
-class Template(Struct):
-    origin = UserField(type=T.Term)
-    instance = UserField(type=T.DefTerm)
-
-
-class Binding(Struct):
-    target = UserField(type=T.Term)
-    domain_val = UserField(type=T.DefTerm)
-
-
-class UnifyEquation(Struct):
-    eq = UserField(type=T.Equation)
-    renamings = UserField(type=Renaming.array)
-
-
-class DomainEquation(Struct):
-    eq = UserField(type=T.Equation)
-    templates = UserField(type=T.Identifier.array)
 
 
 @synthetic

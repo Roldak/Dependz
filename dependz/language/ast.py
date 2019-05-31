@@ -42,6 +42,11 @@ class DomainEquation(Struct):
     templates = UserField(type=T.Identifier.array)
 
 
+class UnifyQuery(Struct):
+    first = UserField(type=T.DefTerm)
+    second = UserField(type=T.DefTerm)
+
+
 @abstract
 class DependzNode(ASTNode):
     """
@@ -64,6 +69,10 @@ class DependzNode(ASTNode):
                    ident=(T.Identifier, No(T.Identifier))):
         return SyntheticArrow.new(lhs=t1, rhs=t2, binder=ident)
 
+    @langkit_property(return_type=T.LogicVarArray, memoized=True)
+    def make_logic_var_array():
+        return LogicVarArray.new()
+
     @langkit_property(external=True, return_type=T.Symbol,
                       uses_entity_info=False, uses_envs=False)
     def fresh_symbol(prefix=T.Symbol):
@@ -78,6 +87,35 @@ class DependzNode(ASTNode):
                       uses_entity_info=False, uses_envs=False)
     def set_logic_equation_debug_mode(mode=T.Int):
         pass
+
+    @langkit_property(return_type=Substitution.array)
+    def unify_all(queries=UnifyQuery.array, symbols=T.Symbol.array):
+        vars = Var(Self.make_logic_var_array)
+        query_results = Var(queries.map(
+            lambda q: q.first.unify_equation(
+                q.second,
+                symbols,
+                vars
+            ))
+        )
+        unify_eq = Var(query_results.logic_all(
+            lambda r: r.eq
+        ))
+        renamings = Var(query_results.mapcat(
+            lambda r: r.renamings
+        ))
+        return If(
+            unify_eq.solve,
+            symbols.map(
+                lambda i, s: Substitution.new(
+                    from_symbol=s,
+                    to_term=vars.elem(i).get_value._.cast(DefTerm).rename_all(
+                        renamings
+                    )
+                )
+            ).filter(lambda s: Not(s.to_term.is_null)),
+            PropertyError(Substitution.array, "Unification failed")
+        )
 
 
 @synthetic
@@ -280,10 +318,6 @@ class DefTerm(DependzNode):
             )
         )
 
-    @langkit_property(return_type=LogicVarArray, memoized=True)
-    def make_logic_var_array():
-        return LogicVarArray.new()
-
     @langkit_property(return_type=T.DefTerm)
     def rename_all(renamings=Renaming.array, idx=(T.Int, 0)):
         return renamings.at(idx).then(
@@ -307,24 +341,10 @@ class DefTerm(DependzNode):
     @langkit_property(public=True, return_type=Substitution.array,
                       activate_tracing=False)
     def unify(other=T.DefTerm, symbols=T.Symbol.array):
-        vars = Var(Self.make_logic_var_array)
-        unify_eq = Var(Self.unify_equation(
-            other,
-            symbols,
-            vars
-        ))
-        return If(
-            unify_eq.eq.solve,
-            symbols.map(
-                lambda i, s: Substitution.new(
-                    from_symbol=s,
-                    to_term=vars.elem(i).get_value._.cast(DefTerm).rename_all(
-                        unify_eq.renamings
-                    )
-                )
-            ).filter(lambda s: Not(s.to_term.is_null)),
-            PropertyError(Substitution.array, "Unification failed")
-        )
+        return Self.unify_all(UnifyQuery.new(
+            first=Self,
+            second=other
+        ).singleton, symbols)
 
     @langkit_property(public=True, return_type=T.Symbol.array)
     def free_symbols():

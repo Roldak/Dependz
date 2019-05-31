@@ -18,3 +18,9 @@ foo = \x.\xs. x
 test_1 : Nat
 test_1 = foo (S Z) (Cons Z Nil)
 
+id : t -> t
+id = \x. x
+
+test_2 : Nat
+test_2 = foo (id Z) Nil
+

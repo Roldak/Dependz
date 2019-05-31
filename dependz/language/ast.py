@@ -610,7 +610,8 @@ class Term(DefTerm):
                             lhs_res.at(0).domain_val.cast(Arrow).binder.then(
                                 lambda b: UnifyQuery.new(
                                     first=b,
-                                    second=rhs_res.at(0).target
+                                    second=rhs_res.at(0).target.as_bare_entity
+                                    .normalized_domain.node
                                 ).singleton
                             )
                         ),

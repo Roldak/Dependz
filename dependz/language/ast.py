@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 from langkit.dsl import (
     ASTNode, abstract, Field, T, Bool, LexicalEnv, synthetic, Struct,
-    UserField, NullField, Symbol, LogicVar
+    UserField, NullField, Symbol, LogicVar, Annotations
 )
 from langkit.envs import EnvSpec, add_env, add_to_env_kv, handle_children
 from langkit.expressions import (
@@ -88,6 +88,8 @@ class LogicVarArray(DependzNode):
 
 @abstract
 class DefTerm(DependzNode):
+    annotations = Annotations(custom_trace_image=True)
+
     to_string = AbstractProperty(public=True, type=T.String)
 
     @langkit_property(return_type=T.DefTerm.entity)

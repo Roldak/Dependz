@@ -1,0 +1,3 @@
+function Bare_Def_Term_Trace_Image
+  (Node : access Bare_Def_Term_Type'Class) return String;
+

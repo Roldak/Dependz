@@ -1,0 +1,12 @@
+test_1: Success
+  <Apply test.dep:19:10-19:32>: Nat
+  <Apply test.dep:19:10-19:19>: ((Vec Nat) (S Z)) -> Nat
+  <SourceId test.dep:19:10-19:13>: Nat -> ((Vec Nat) (S Z)) -> Nat
+  <Apply test.dep:19:15-19:18>: Nat
+  <SourceId test.dep:19:15-19:16>: Nat -> Nat
+  <SourceId test.dep:19:17-19:18>: Nat
+  <Apply test.dep:19:21-19:31>: ((Vec Nat) (S Z))
+  <Apply test.dep:19:21-19:27>: ((Vec Nat) Z) -> ((Vec Nat) (S Z))
+  <SourceId test.dep:19:21-19:25>: Nat -> ((Vec Nat) Z) -> ((Vec Nat) (S Z))
+  <SourceId test.dep:19:26-19:27>: Nat
+  <SourceId test.dep:19:28-19:31>: ((Vec Nat) Z)

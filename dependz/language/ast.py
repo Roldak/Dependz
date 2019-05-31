@@ -602,8 +602,19 @@ class Term(DefTerm):
 
                 Let(
                     lambda
-                    substs=lhs_res.at(0).domain_val.cast(Arrow).lhs.unify(
-                        rhs_res.at(0).domain_val, formals
+                    substs=Self.unify_all(
+                        UnifyQuery.new(
+                            first=lhs_res.at(0).domain_val.cast(Arrow).lhs,
+                            second=rhs_res.at(0).domain_val
+                        ).singleton.concat(
+                            lhs_res.at(0).domain_val.cast(Arrow).binder.then(
+                                lambda b: UnifyQuery.new(
+                                    first=b,
+                                    second=rhs_res.at(0).target
+                                ).singleton
+                            )
+                        ),
+                        formals
                     ):
 
                     Let(

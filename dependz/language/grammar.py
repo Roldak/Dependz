@@ -23,7 +23,6 @@ dependz_grammar.add_rules(
     term2=Or(Abstraction('\\', D.ident, '.', D.term), D.term3),
     term3=Pick('(', D.term, ')'),
 
-    defterm=Or(D.arrow, D.defterm1),
-    defterm1=Or(Pick("(", D.defterm, ")"), D.term),
-    arrow=Arrow(D.defterm1, '->', D.defterm)
+    defterm=Or(Arrow(D.defterm1, '->', D.defterm), D.defterm1),
+    defterm1=Or(Pick("(", D.defterm, ")"), D.term)
 )

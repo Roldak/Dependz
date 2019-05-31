@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
-from langkit.parsers import Grammar, List, Or, Pick
+from langkit.parsers import Grammar, List, Or, Pick, Null
 from language.lexer import dependz_lexer as L
 from language.ast import (
     Program, Introduction, Definition, Abstraction, Apply, SourceId, Arrow
@@ -23,6 +23,10 @@ dependz_grammar.add_rules(
     term2=Or(Abstraction('\\', D.ident, '.', D.term), D.term3),
     term3=Pick('(', D.term, ')'),
 
-    defterm=Or(Arrow(D.defterm1, '->', D.defterm), D.defterm1),
-    defterm1=Or(Pick("(", D.defterm, ")"), D.term)
+    defterm=Or(
+        Or(Arrow(Null(SourceId), D.defterm1, '->', D.defterm),
+           Arrow(D.ident, ':', D.defterm1, '->', D.defterm)),
+        D.defterm1
+    ),
+    defterm1=Or(Pick("(", D.defterm, ")"), D.term),
 )

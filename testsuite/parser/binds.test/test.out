@@ -1,0 +1,36 @@
+Program test.dep:1:1-7:1
+|item_0:
+|  Introduction test.dep:1:1-2:1
+|  |ident:
+|  |  SourceId test.dep:1:1-1:4: Nat
+|  |term:
+|  |  SourceId test.dep:1:7-1:11: Type
+|item_1:
+|  Introduction test.dep:2:1-3:1
+|  |ident:
+|  |  SourceId test.dep:2:1-2:2: Z
+|  |term:
+|  |  SourceId test.dep:2:5-2:8: Nat
+|item_2:
+|  Introduction test.dep:3:1-5:1
+|  |ident:
+|  |  SourceId test.dep:3:1-3:2: S
+|  |term:
+|  |  Arrow test.dep:3:5-3:15
+|  |  |binder: None
+|  |  |lhs:
+|  |  |  SourceId test.dep:3:5-3:8: Nat
+|  |  |rhs:
+|  |  |  SourceId test.dep:3:12-3:15: Nat
+|item_3:
+|  Introduction test.dep:5:1-7:1
+|  |ident:
+|  |  SourceId test.dep:5:1-5:5: test
+|  |term:
+|  |  Arrow test.dep:5:8-5:20
+|  |  |binder:
+|  |  |  SourceId test.dep:5:8-5:9: n
+|  |  |lhs:
+|  |  |  SourceId test.dep:5:10-5:13: Nat
+|  |  |rhs:
+|  |  |  SourceId test.dep:5:17-5:20: Nat

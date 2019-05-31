@@ -30,8 +30,9 @@ class DependzNode(ASTNode):
         return SyntheticAbstraction.new(ident=id, term=rhs)
 
     @langkit_property(public=True, memoized=True)
-    def make_arrow(t1=T.DefTerm, t2=T.DefTerm):
-        return SyntheticArrow.new(lhs=t1, rhs=t2)
+    def make_arrow(t1=T.DefTerm, t2=T.DefTerm,
+                   ident=(T.Identifier, No(T.Identifier))):
+        return SyntheticArrow.new(lhs=t1, rhs=t2, binder=ident)
 
     @langkit_property(external=True, return_type=T.Symbol,
                       uses_entity_info=False, uses_envs=False)
@@ -98,7 +99,8 @@ class DefTerm(DependzNode):
             lambda t=Term: t.node.normalize,
             lambda a=Arrow: a.parent.make_arrow(
                 a.lhs.normalized_domain.node,
-                a.rhs.normalized_domain.node
+                a.rhs.normalized_domain.node,
+                a.binder.node
             )
         ).as_entity
 
@@ -108,7 +110,8 @@ class DefTerm(DependzNode):
             lambda t=Term: t.rename(old, by),
             lambda ar=Arrow: Self.parent.make_arrow(
                 ar.lhs.renamed_domain(old, by),
-                ar.rhs.renamed_domain(old, by)
+                ar.rhs.renamed_domain(old, by),
+                ar.binder._.rename(old, by).cast(Identifier)
             )
         )
 
@@ -118,7 +121,12 @@ class DefTerm(DependzNode):
             lambda t=Term: t.substitute(sym, val.cast_or_raise(Term)),
             lambda ar=Arrow: Self.parent.make_arrow(
                 ar.lhs.substituted_domain(sym, val),
-                ar.rhs.substituted_domain(sym, val)
+                ar.rhs.substituted_domain(sym, val),
+                ar.binder.then(lambda b: If(
+                    b.sym == sym,
+                    No(Identifier),
+                    b
+                ))
             )
         )
 
@@ -296,7 +304,8 @@ class DefTerm(DependzNode):
             default_val=Self
         )
 
-    @langkit_property(public=True, return_type=Substitution.array)
+    @langkit_property(public=True, return_type=Substitution.array,
+                      activate_tracing=False)
     def unify(other=T.DefTerm, symbols=T.Symbol.array):
         vars = Var(Self.make_logic_var_array)
         unify_eq = Var(Self.unify_equation(
@@ -460,7 +469,8 @@ class Term(DefTerm):
         )
 
     @langkit_property(return_type=T.DomainEquation,
-                      uses_entity_info=False)
+                      uses_entity_info=False,
+                      activate_tracing=False)
     def domain_equation(bindings=Binding.array):
         relevant_binding = Var(bindings.find(
             lambda b: b.target == Self
@@ -546,7 +556,8 @@ class Term(DefTerm):
             default_val=result
         )
 
-    @langkit_property(public=True, return_type=Binding.array)
+    @langkit_property(public=True, return_type=Binding.array,
+                      activate_tracing=False)
     def instantiate_templates(templates=Template.array,
                               formals=T.Symbol.array):
         def make_binding(term, domain):
@@ -683,6 +694,7 @@ class SyntheticAbstraction(Abstraction):
 
 
 class Arrow(DefTerm):
+    binder = Field(type=Identifier)
     lhs = Field(type=DefTerm)
     rhs = Field(type=DefTerm)
 

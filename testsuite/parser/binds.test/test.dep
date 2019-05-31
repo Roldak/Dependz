@@ -1,0 +1,6 @@
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+test : n:Nat -> Nat
+

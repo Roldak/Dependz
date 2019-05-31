@@ -17,6 +17,7 @@ Program test.dep:1:1-9:1
 |  |  SourceId test.dep:3:1-3:2: S
 |  |term:
 |  |  Arrow test.dep:3:5-3:15
+|  |  |binder: None
 |  |  |lhs:
 |  |  |  SourceId test.dep:3:5-3:8: Nat
 |  |  |rhs:
@@ -27,10 +28,12 @@ Program test.dep:1:1-9:1
 |  |  SourceId test.dep:5:1-5:4: Add
 |  |term:
 |  |  Arrow test.dep:5:7-5:24
+|  |  |binder: None
 |  |  |lhs:
 |  |  |  SourceId test.dep:5:7-5:10: Nat
 |  |  |rhs:
 |  |  |  Arrow test.dep:5:14-5:24
+|  |  |  |binder: None
 |  |  |  |lhs:
 |  |  |  |  SourceId test.dep:5:14-5:17: Nat
 |  |  |  |rhs:
@@ -41,14 +44,17 @@ Program test.dep:1:1-9:1
 |  |  SourceId test.dep:7:1-7:11: Church_Nat
 |  |term:
 |  |  Arrow test.dep:7:14-7:32
+|  |  |binder: None
 |  |  |lhs:
 |  |  |  Arrow test.dep:7:15-7:21
+|  |  |  |binder: None
 |  |  |  |lhs:
 |  |  |  |  SourceId test.dep:7:15-7:16: A
 |  |  |  |rhs:
 |  |  |  |  SourceId test.dep:7:20-7:21: A
 |  |  |rhs:
 |  |  |  Arrow test.dep:7:26-7:32
+|  |  |  |binder: None
 |  |  |  |lhs:
 |  |  |  |  SourceId test.dep:7:26-7:27: A
 |  |  |  |rhs:

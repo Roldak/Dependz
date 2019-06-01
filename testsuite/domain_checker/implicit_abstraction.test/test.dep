@@ -1,0 +1,19 @@
+Type : Type_1
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+Vec : Type -> Nat -> Type
+Nil : Vec t Z
+Cons : t -> Vec t n -> Vec t (S n)
+
+One : Nat
+One = S Z
+
+Two : Nat
+Two = S One
+
+foo : a:Type -> (a -> Type) -> Type
+
+test_1 : Type
+test_1 = foo Nat (\n. Nat)

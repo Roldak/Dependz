@@ -12,7 +12,7 @@ from langkit.expressions import (
 )
 
 
-GLOBAL_ACTIVATE_TRACING = True
+GLOBAL_ACTIVATE_TRACING = False
 
 
 class Renaming(Struct):
@@ -141,14 +141,18 @@ class DefTerm(DependzNode):
 
     @langkit_property(return_type=T.DefTerm.entity)
     def normalized_domain():
-        return Entity.match(
-            lambda t=Term: t.node.normalize,
+        return Entity.node.dnorm.as_entity
+
+    @langkit_property(return_type=T.DefTerm)
+    def dnorm():
+        return Self.match(
+            lambda t=Term: t.normalize,
             lambda a=Arrow: a.parent.make_arrow(
-                a.lhs.normalized_domain.node,
-                a.rhs.normalized_domain.node,
-                a.binder.node
+                a.lhs.dnorm,
+                a.rhs.dnorm,
+                a.binder
             )
-        ).as_entity
+        )
 
     @langkit_property(return_type=T.DefTerm, public=True)
     def renamed_domain(old=T.Symbol, by=T.Symbol):
@@ -585,7 +589,8 @@ class Term(DefTerm):
 
     @langkit_property(public=True, return_type=Binding.array,
                       activate_tracing=GLOBAL_ACTIVATE_TRACING)
-    def instantiate_templates(templates=Template.array,
+    def instantiate_templates(result_domain=T.DefTerm,
+                              templates=Template.array,
                               formals=T.Symbol.array):
         def make_binding(term, domain):
             return Binding.new(
@@ -593,23 +598,35 @@ class Term(DefTerm):
                 domain_val=domain
             )
 
+        def rec_apply(ap, f):
+            return Let(
+                lambda
+                lhs_res=ap.lhs.instantiate_templates(
+                    No(T.DefTerm), templates, formals
+                ): Let(
+                    lambda
+                    rhs_res=ap.rhs.instantiate_templates(
+                        lhs_res.at(0).domain_val.cast(Arrow).lhs,
+                        templates, formals
+                    ):
+
+                    f(lhs_res, rhs_res)
+                )
+            )
+
         templated_result = Var(Self.match(
             lambda id=Identifier: make_binding(
                 id,
                 templates.find(lambda t: t.origin == id).then(
                     lambda t: t.instance,
-                    default_val=id.domain_val
+                    default_val=id.domain_val._or(result_domain)
                 )
             ).singleton,
 
-            lambda ap=Apply: Let(
-                lambda
-                lhs_res=ap.lhs.instantiate_templates(templates, formals),
-                rhs_res=ap.rhs.instantiate_templates(templates, formals):
-
-                Let(
-                    lambda
-                    substs=Self.unify_all(
+            lambda ap=Apply: rec_apply(
+                ap,
+                lambda lhs_res, rhs_res: Let(
+                    lambda substs=Self.unify_all(
                         UnifyQuery.new(
                             first=lhs_res.at(0).domain_val.cast(Arrow).lhs,
                             second=rhs_res.at(0).domain_val
@@ -617,8 +634,7 @@ class Term(DefTerm):
                             lhs_res.at(0).domain_val.cast(Arrow).binder.then(
                                 lambda b: UnifyQuery.new(
                                     first=b,
-                                    second=rhs_res.at(0).target.as_bare_entity
-                                    .normalized_domain.node
+                                    second=rhs_res.at(0).target.dnorm
                                 ).singleton
                             )
                         ),
@@ -630,7 +646,7 @@ class Term(DefTerm):
                         new_bindings=lhs_res.concat(rhs_res).map(
                             lambda b: make_binding(
                                 b.target,
-                                b.domain_val.substitute_all(substs)
+                                b.domain_val.substitute_all(substs).dnorm
                             )
                         ):
 
@@ -645,12 +661,17 @@ class Term(DefTerm):
 
             lambda ab=Abstraction: Let(
                 lambda
-                term_res=ab.term.instantiate_templates(templates, formals):
+                term_res=ab.term.instantiate_templates(
+                    result_domain._.cast(Arrow).rhs,
+                    templates, formals
+                ):
 
                 make_binding(
                     ab,
                     Self.parent.make_arrow(
-                        ab.ident.domain_val,
+                        ab.ident.domain_val._or(
+                            result_domain._.cast(Arrow).lhs
+                        ),
                         term_res.at(0).domain_val
                     )
                 ).singleton.concat(term_res)
@@ -664,7 +685,7 @@ class Term(DefTerm):
                 ): templated_result.map(
                     lambda b: make_binding(
                         b.target,
-                        b.domain_val.substitute_all(substs)
+                        b.domain_val.substitute_all(substs).dnorm
                     )
                 )
             ),
@@ -781,8 +802,7 @@ class Introduction(DependzNode):
         )))
         return Template.new(
             origin=origin_term,
-            instance=Self.term.rename_all(renamings).as_bare_entity
-            .normalized_domain.node,
+            instance=Self.term.rename_all(renamings).dnorm,
         )
 
     env_spec = EnvSpec(
@@ -804,14 +824,17 @@ class Definition(DependzNode):
 
     @langkit_property(public=True, return_type=T.Bool)
     def check_domains(tries=(T.Int, -1)):
-        return Self.check_domains_internal(No(Binding.array), tries)
+        return Self.check_domains_internal(
+            Self.ident.intro.term.normalized_domain,
+            No(Binding.array), tries
+        )
 
     @langkit_property(public=False, return_type=T.Bool)
-    def check_domains_internal(bindings=Binding.array, tries=T.Int):
+    def check_domains_internal(expected_domain=T.DefTerm.entity,
+                               bindings=Binding.array, tries=T.Int):
         term_eq = Var(Self.term.domain_equation(bindings))
         domain_eq = And(
-            Bind(Self.term.domain_var,
-                 Self.ident.intro.term.normalized_domain),
+            Bind(Self.term.domain_var, expected_domain),
             term_eq.eq
         )
         self_formals = Self.ident.intro.generic_formals
@@ -824,9 +847,11 @@ class Definition(DependzNode):
                 instances=templates.map(lambda t: t.intro.as_template(t)):
 
                 Self.term.instantiate_templates(
+                    expected_domain.node,
                     instances,
                     instances.mapcat(lambda i: i.instance.free_symbols)
                 ).then(lambda result: Self.check_domains_internal(
+                    expected_domain,
                     result.filter(
                         lambda b: b.domain_val.free_symbols.all(
                             lambda sym: self_formals.contains(sym)

@@ -592,10 +592,16 @@ class Term(DefTerm):
     def instantiate_templates(result_domain=T.DefTerm,
                               templates=Template.array,
                               formals=T.Symbol.array):
-        def make_binding(term, domain):
+        def make_binding(domain):
             return Binding.new(
-                target=term,
+                target=Self,
                 domain_val=domain
+            )
+
+        def update_binding(b, new_domain):
+            return Binding.new(
+                target=b.target,
+                domain_val=new_domain
             )
 
         def rec_apply(ap, f):
@@ -616,7 +622,6 @@ class Term(DefTerm):
 
         templated_result = Var(Self.match(
             lambda id=Identifier: make_binding(
-                id,
                 templates.find(lambda t: t.origin == id).then(
                     lambda t: t.instance,
                     default_val=id.domain_val._or(result_domain)
@@ -644,14 +649,12 @@ class Term(DefTerm):
                     Let(
                         lambda
                         new_bindings=lhs_res.concat(rhs_res).map(
-                            lambda b: make_binding(
-                                b.target,
-                                b.domain_val.substitute_all(substs).dnorm
+                            lambda b: update_binding(
+                                b, b.domain_val.substitute_all(substs).dnorm
                             )
                         ):
 
                         make_binding(
-                            ap,
                             new_bindings.at(0).domain_val.cast_or_raise(Arrow)
                             .rhs
                         ).singleton.concat(new_bindings)
@@ -667,7 +670,6 @@ class Term(DefTerm):
                 ):
 
                 make_binding(
-                    ab,
                     Self.parent.make_arrow(
                         ab.ident.domain_val._or(
                             result_domain._.cast(Arrow).lhs
@@ -683,9 +685,8 @@ class Term(DefTerm):
                 lambda substs=templated_result.at(0).domain_val.unify(
                     expected_dom, formals
                 ): templated_result.map(
-                    lambda b: make_binding(
-                        b.target,
-                        b.domain_val.substitute_all(substs).dnorm
+                    lambda b: update_binding(
+                        b, b.domain_val.substitute_all(substs).dnorm
                     )
                 )
             ),

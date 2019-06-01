@@ -12,6 +12,9 @@ from langkit.expressions import (
 )
 
 
+GLOBAL_ACTIVATE_TRACING = True
+
+
 class Renaming(Struct):
     from_symbol = UserField(type=T.Symbol)
     to_symbol = UserField(type=T.Symbol)
@@ -88,7 +91,12 @@ class DependzNode(ASTNode):
     def set_logic_equation_debug_mode(mode=T.Int):
         pass
 
-    @langkit_property(return_type=Substitution.array)
+    @langkit_property(return_type=T.DependzNode, activate_tracing=True)
+    def here():
+        return Self
+
+    @langkit_property(return_type=Substitution.array,
+                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def unify_all(queries=UnifyQuery.array, symbols=T.Symbol.array):
         vars = Var(Self.make_logic_var_array)
         query_results = Var(queries.map(
@@ -338,8 +346,7 @@ class DefTerm(DependzNode):
             default_val=Self
         )
 
-    @langkit_property(public=True, return_type=Substitution.array,
-                      activate_tracing=False)
+    @langkit_property(public=True, return_type=Substitution.array)
     def unify(other=T.DefTerm, symbols=T.Symbol.array):
         return Self.unify_all(UnifyQuery.new(
             first=Self,
@@ -490,7 +497,7 @@ class Term(DefTerm):
 
     @langkit_property(return_type=T.DomainEquation,
                       uses_entity_info=False,
-                      activate_tracing=False)
+                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def domain_equation(bindings=Binding.array):
         relevant_binding = Var(bindings.find(
             lambda b: b.target == Self
@@ -577,7 +584,7 @@ class Term(DefTerm):
         )
 
     @langkit_property(public=True, return_type=Binding.array,
-                      activate_tracing=False)
+                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def instantiate_templates(templates=Template.array,
                               formals=T.Symbol.array):
         def make_binding(term, domain):
@@ -657,9 +664,7 @@ class Term(DefTerm):
                 ): templated_result.map(
                     lambda b: make_binding(
                         b.target,
-                        b.domain_val.substitute_all(substs).then(
-                            lambda r: Let(lambda str=r.to_string: r)
-                        )
+                        b.domain_val.substitute_all(substs)
                     )
                 )
             ),

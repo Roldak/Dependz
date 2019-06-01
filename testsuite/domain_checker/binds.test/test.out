@@ -18,3 +18,5 @@ test_2: Success
   <SourceId test.dep:25:15-25:17>: Nat -> Nat
   <SourceId test.dep:25:18-25:19>: Nat
   <SourceId test.dep:25:21-25:24>: ((Vec Nat) Z)
+test_3: Success
+  <SourceId test.dep:28:10-28:13>: (m:Nat) -> ((Vec Nat) m) -> Nat

@@ -1,18 +1,18 @@
 test_1: Success
   <Apply test.dep:16:10-16:29>: ((Vec Nat) (S (S Z)))
-  <Apply test.dep:16:10-16:16>: ((Vec Nat) (S Z)) -> ((Vec Nat) (S (S Z)))
-  <SourceId test.dep:16:10-16:14>: Nat -> ((Vec Nat) (S Z)) -> ((Vec Nat) (S (S Z)))
+  <Apply test.dep:16:10-16:16>: (((Vec Nat) (S Z)) -> ((Vec Nat) (S (S Z))))
+  <SourceId test.dep:16:10-16:14>: (Nat -> (((Vec Nat) (S Z)) -> ((Vec Nat) (S (S Z)))))
   <SourceId test.dep:16:15-16:16>: Nat
   <Apply test.dep:16:18-16:28>: ((Vec Nat) (S Z))
-  <Apply test.dep:16:18-16:24>: ((Vec Nat) Z) -> ((Vec Nat) (S Z))
-  <SourceId test.dep:16:18-16:22>: Nat -> ((Vec Nat) Z) -> ((Vec Nat) (S Z))
+  <Apply test.dep:16:18-16:24>: (((Vec Nat) Z) -> ((Vec Nat) (S Z)))
+  <SourceId test.dep:16:18-16:22>: (Nat -> (((Vec Nat) Z) -> ((Vec Nat) (S Z))))
   <SourceId test.dep:16:23-16:24>: Nat
   <SourceId test.dep:16:25-16:28>: ((Vec Nat) Z)
 test_prepend_Z: Success
-  <Abstraction test.dep:19:18-19:30>: ((Vec Nat) n) -> ((Vec Nat) (S n))
+  <Abstraction test.dep:19:18-19:30>: (((Vec Nat) n) -> ((Vec Nat) (S n)))
   <SourceId test.dep:19:19-19:20>: ((Vec Nat) n)
   <Apply test.dep:19:22-19:30>: ((Vec Nat) (S n))
-  <Apply test.dep:19:22-19:28>: ((Vec Nat) n) -> ((Vec Nat) (S n))
-  <SourceId test.dep:19:22-19:26>: Nat -> ((Vec Nat) n) -> ((Vec Nat) (S n))
+  <Apply test.dep:19:22-19:28>: (((Vec Nat) n) -> ((Vec Nat) (S n)))
+  <SourceId test.dep:19:22-19:26>: (Nat -> (((Vec Nat) n) -> ((Vec Nat) (S n))))
   <SourceId test.dep:19:27-19:28>: Nat
   <SourceId test.dep:19:29-19:30>: ((Vec Nat) n)

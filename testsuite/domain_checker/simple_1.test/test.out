@@ -1,8 +1,8 @@
 test_1: Success
-  <Abstraction test.dep:9:10-9:17>: Nat -> Nat
+  <Abstraction test.dep:9:10-9:17>: (Nat -> Nat)
   <SourceId test.dep:9:11-9:12>: Nat
   <Apply test.dep:9:14-9:17>: Nat
-  <SourceId test.dep:9:14-9:15>: Nat -> Nat
+  <SourceId test.dep:9:14-9:15>: (Nat -> Nat)
   <SourceId test.dep:9:16-9:17>: Nat
 test_2: Success
-  <SourceId test.dep:12:10-12:16>: Nat -> Nat
+  <SourceId test.dep:12:10-12:16>: (Nat -> Nat)

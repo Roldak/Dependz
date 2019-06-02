@@ -759,11 +759,12 @@ class Arrow(DefTerm):
 
     @langkit_property()
     def to_string():
-        return Self.binder.then(
-            lambda b: String('(').concat(b.to_string).concat(String(':'))
-            .concat(Self.lhs.to_string).concat(String(')')),
+        return String('(').concat(Self.binder.then(
+            lambda b: b.to_string.concat(String(':'))
+            .concat(Self.lhs.to_string),
             default_val=Self.lhs.to_string
         ).concat(String(' -> ')).concat(Self.rhs.to_string)
+         .concat(String(')')))
 
     @langkit_property(return_type=DefTerm.entity)
     def param():

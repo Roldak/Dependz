@@ -10,4 +10,3 @@ test_1 = \n. S n
 
 test_2 : Nat -> id Nat
 test_2 = test_1
-

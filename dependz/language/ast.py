@@ -113,7 +113,7 @@ class DependzNode(ASTNode):
             lambda r: r.renamings
         ))
         return If(
-            unify_eq.solve,
+            Try(unify_eq.solve, True),
             symbols.map(
                 lambda i, s: Substitution.new(
                     from_symbol=s,

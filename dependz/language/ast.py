@@ -394,7 +394,16 @@ class Term(DefTerm):
                 lambda ab: ab.term.substitute(ab.ident.sym, ap.rhs).eval,
                 default_val=ap
             ),
-            lambda other: other
+            lambda ab=Abstraction: ab.term.cast(Apply).then(
+                lambda ap: If(
+                    And(
+                        ap.rhs.cast(Identifier)._.sym == ab.ident.sym,
+                        Not(ap.lhs.is_free(ab.ident.sym))
+                    ),
+                    ap.lhs.eval,
+                    ab
+                ),
+            )._or(ab)
         )
 
     @langkit_property(public=True, return_type=T.Term)

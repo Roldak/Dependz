@@ -7,18 +7,14 @@ test_pair: Success
   <SourceId test.dep:20:23-20:24>: (Nat -> Nat)
   <SourceId test.dep:20:25-20:26>: Nat
 test_dpair: Success
-  <Apply test.dep:26:14-26:46>: ((DPair Nat) (\n. ((Vec Nat) n)))
-  <Apply test.dep:26:14-26:42>: (((Vec Nat) Z) -> ((DPair Nat) (\n. ((Vec Nat) n))))
-  <Apply test.dep:26:14-26:40>: (Nat -> (((Vec Nat) Z) -> ((DPair Nat) (\n. ((Vec Nat) n)))))
-  <Apply test.dep:26:14-26:24>: ((Nat -> Type) -> (Nat -> (((Vec Nat) Z) -> ((DPair Nat) (\n. ((Vec Nat) n))))))
-  <SourceId test.dep:26:14-26:20>: (Type -> ((Nat -> Type) -> (Nat -> (((Vec Nat) Z) -> ((DPair Nat) (\n. ((Vec Nat) n)))))))
-  <SourceId test.dep:26:21-26:24>: Type
-  <Abstraction test.dep:26:26-26:39>: (Nat -> Type)
-  <SourceId test.dep:26:27-26:28>: Nat
-  <Apply test.dep:26:30-26:39>: Type
-  <Apply test.dep:26:30-26:37>: (Nat -> Type)
-  <SourceId test.dep:26:30-26:33>: (Type -> (Nat -> Type))
-  <SourceId test.dep:26:34-26:37>: Type
-  <SourceId test.dep:26:38-26:39>: Nat
-  <SourceId test.dep:26:41-26:42>: Nat
-  <SourceId test.dep:26:43-26:46>: ((Vec Nat) Z)
+  <Apply test.dep:26:14-26:39>: ((DPair Nat) (Vec Nat))
+  <Apply test.dep:26:14-26:26>: (((Vec Nat) (S Z)) -> ((DPair Nat) (Vec Nat)))
+  <SourceId test.dep:26:14-26:20>: (Nat -> (((Vec Nat) (S Z)) -> ((DPair Nat) (Vec Nat))))
+  <Apply test.dep:26:22-26:25>: Nat
+  <SourceId test.dep:26:22-26:23>: (Nat -> Nat)
+  <SourceId test.dep:26:24-26:25>: Nat
+  <Apply test.dep:26:28-26:38>: ((Vec Nat) (S Z))
+  <Apply test.dep:26:28-26:34>: (((Vec Nat) Z) -> ((Vec Nat) (S Z)))
+  <SourceId test.dep:26:28-26:32>: (Nat -> (((Vec Nat) Z) -> ((Vec Nat) (S Z))))
+  <SourceId test.dep:26:33-26:34>: Nat
+  <SourceId test.dep:26:35-26:38>: ((Vec Nat) Z)

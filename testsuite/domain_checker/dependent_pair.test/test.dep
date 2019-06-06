@@ -20,7 +20,8 @@ test_pair : Pair Nat Nat
 test_pair = MkPair Z (S Z)
 
 DPair : a:Type -> P : (a -> Type) -> Type
-DPMake : a:Type -> P:(a -> Type) -> x:a -> P x -> DPair a P
+DPMake : x:a -> P x -> DPair a P
 
 test_dpair : DPair Nat (\n. Vec Nat n)
-test_dpair = DPMake Nat (\n. Vec Nat n) Z Nil
+test_dpair = DPMake (S Z) (Cons Z Nil)
+

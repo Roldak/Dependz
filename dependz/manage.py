@@ -13,6 +13,7 @@ class Manage(ManageScript):
         from language.grammar import dependz_grammar
 
         return CompileCtx(lang_name='Dependz',
+                          short_name='LDL',
                           lexer=dependz_lexer,
                           grammar=dependz_grammar)
 

@@ -855,11 +855,11 @@ class Definition(DependzNode):
     def check_domains_internal(expected_domain=T.DefTerm.entity,
                                bindings=Binding.array, tries=T.Int):
         term_eq = Var(Self.term.domain_equation(bindings))
-        domain_eq = And(
+        domain_eq = Var(And(
             Bind(Self.term.domain_var, expected_domain),
             term_eq.eq
-        )
-        self_formals = Self.ident.intro.generic_formals
+        ))
+        self_formals = Var(Self.ident.intro.generic_formals)
         return term_eq.templates.then(
             lambda templates: Try(
                 domain_eq.solve,

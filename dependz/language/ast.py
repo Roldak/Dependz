@@ -863,25 +863,26 @@ class Definition(DependzNode):
         return term_eq.templates.then(
             lambda templates: Try(
                 domain_eq.solve,
-                tries != 0
-            ).then(lambda _: Let(
-                lambda
-                instances=templates.map(lambda t: t.intro.as_template(t)):
+                (tries != 0).then(lambda _: Let(
+                    lambda instances=templates.map(
+                        lambda t: t.intro.as_template(t)
+                    ):
 
-                Self.term.instantiate_templates(
-                    expected_domain.node,
-                    instances,
-                    instances.mapcat(lambda i: i.instance.free_symbols)
-                ).then(lambda result: Self.check_domains_internal(
-                    expected_domain,
-                    result.filter(
-                        lambda b: b.domain_val.free_symbols.all(
-                            lambda sym: self_formals.contains(sym)
-                        )
-                    ),
-                    tries - 1
+                    Self.term.instantiate_templates(
+                        expected_domain.node,
+                        instances,
+                        instances.mapcat(lambda i: i.instance.free_symbols)
+                    ).then(lambda result: Self.check_domains_internal(
+                        expected_domain,
+                        result.filter(
+                            lambda b: b.domain_val.free_symbols.all(
+                                lambda sym: self_formals.contains(sym)
+                            )
+                        ),
+                        tries - 1
+                    ))
                 ))
-            )),
+            ),
             default_val=domain_eq.solve
         )
 

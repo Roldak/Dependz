@@ -1,8 +1,12 @@
 test_1: Success
   <Apply test.dep:19:10-19:27>: Type
-  <Apply test.dep:19:10-19:17>: ((Nat -> Type) -> Type)
-  <SourceId test.dep:19:10-19:13>: (Type -> ((Nat -> Type) -> Type))
+  <Apply test.dep:19:10-19:17>: ((a -> Type) -> Type)
+  <SourceId test.dep:19:10-19:13>: (a:Type -> ((a -> Type) -> Type))
   <SourceId test.dep:19:14-19:17>: Type
-  <Abstraction test.dep:19:19-19:26>: (Nat -> Type)
-  <SourceId test.dep:19:20-19:21>: Nat
+  <Abstraction test.dep:19:19-19:26>: (a -> Type)
+  <SourceId test.dep:19:20-19:21>: a
   <SourceId test.dep:19:23-19:26>: Type
+test_bar: Success
+  <Apply test.dep:25:12-25:22>: Nat
+  <SourceId test.dep:25:12-25:15>: ((x:Nat -> ((Vec Nat) x)) -> Nat)
+  <SourceId test.dep:25:16-25:22>: (x:Nat -> ((Vec Nat) x))

@@ -17,3 +17,9 @@ foo : a:Type -> (a -> Type) -> Type
 
 test_1 : Type
 test_1 = foo Nat (\n. Nat)
+
+bar : (x:Nat -> Vec Nat x) -> Nat
+zeroes : n:Nat -> Vec Nat n
+
+test_bar : Nat
+test_bar = bar zeroes

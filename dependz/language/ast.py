@@ -358,12 +358,18 @@ class DefTerm(DependzNode):
         ).singleton, symbols)
 
     @langkit_property(public=True, return_type=T.Symbol.array)
-    def free_symbols():
-        def combine(lhs, rhs):
-            return Let(
-                lambda l=lhs.free_symbols:
+    def free_symbols(deep=(T.Bool, False)):
+        return Self.free_symbols_impl(deep, 0)
 
-                l.concat(rhs.free_symbols.filter(
+    @langkit_property(public=True, return_type=T.Symbol.array)
+    def free_symbols_impl(deep=T.Bool, cur_depth=T.Int):
+        def combine(lhs, rhs, inc_on_lhs):
+            return Let(
+                lambda l=lhs.free_symbols_impl(
+                    deep, (cur_depth + 1) if inc_on_lhs else cur_depth
+                ):
+
+                l.concat(rhs.free_symbols_impl(deep, cur_depth).filter(
                     lambda s: Not(l.contains(s))
                 ))
             )
@@ -373,11 +379,16 @@ class DefTerm(DependzNode):
                 lambda _: No(T.Symbol.array),
                 default_val=id.sym.singleton
             ),
-            lambda ab=Abstraction: ab.term.free_symbols.filter(
+            lambda ab=Abstraction:
+            ab.term.free_symbols_impl(deep, cur_depth).filter(
                 lambda s: s != ab.ident.sym
             ),
-            lambda ap=Apply: combine(ap.lhs, ap.rhs),
-            lambda ar=Arrow: combine(ar.lhs, ar.rhs)
+            lambda ap=Apply: combine(ap.lhs, ap.rhs, False),
+            lambda ar=Arrow: If(
+                And(Not(deep), cur_depth > 0),
+                No(T.Symbol.array),
+                combine(ar.lhs, ar.rhs, True),
+            )
         )
 
 

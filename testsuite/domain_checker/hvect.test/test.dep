@@ -1,0 +1,19 @@
+Type : Type1
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+Bool : Type
+True : Bool
+False : Bool
+
+Vec  : Type -> Nat -> Type
+Nil  : Vec t Z
+Cons : t -> Vec t n -> Vec t (S n)
+
+HVec  : Vec Type k -> Type
+HNil  : HVec Nil
+HCons : t -> HVec ts -> HVec (Cons t ts)
+
+test_1 : HVec (Cons Nat (Cons Bool Nil))
+test_1 = HCons Z (HCons True HNil)

@@ -1,0 +1,10 @@
+test_1: Success
+  <Apply test.dep:19:10-19:35>: (HVec ((Cons Nat) ((Cons Bool) Nil)))
+  <Apply test.dep:19:10-19:17>: ((HVec ((Cons Bool) Nil)) -> (HVec ((Cons Nat) ((Cons Bool) Nil))))
+  <SourceId test.dep:19:10-19:15>: (Nat -> ((HVec ((Cons Bool) Nil)) -> (HVec ((Cons Nat) ((Cons Bool) Nil)))))
+  <SourceId test.dep:19:16-19:17>: Nat
+  <Apply test.dep:19:19-19:34>: (HVec ((Cons Bool) Nil))
+  <Apply test.dep:19:19-19:29>: ((HVec Nil) -> (HVec ((Cons Bool) Nil)))
+  <SourceId test.dep:19:19-19:24>: (Bool -> ((HVec Nil) -> (HVec ((Cons Bool) Nil))))
+  <SourceId test.dep:19:25-19:29>: Bool
+  <SourceId test.dep:19:30-19:34>: (HVec Nil)

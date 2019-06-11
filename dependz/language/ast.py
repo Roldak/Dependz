@@ -115,9 +115,9 @@ class DependzNode(ASTNode):
         return If(
             Try(unify_eq.solve, True),
             symbols.map(
-                lambda i, s: Substitution.new(
+                lambda s: Substitution.new(
                     from_symbol=s,
-                    to_term=vars.elem(i).get_value._.cast(DefTerm).rename_all(
+                    to_term=vars.elem(s).get_value._.cast(DefTerm).rename_all(
                         renamings
                     )
                 )
@@ -129,7 +129,7 @@ class DependzNode(ASTNode):
 @synthetic
 class LogicVarArray(DependzNode):
     @langkit_property(return_type=T.LogicVar, memoized=True)
-    def elem(idx=T.Int):
+    def elem(s=T.Symbol):
         return Self.create_logic_var
 
 
@@ -216,14 +216,12 @@ class DefTerm(DependzNode):
                        symbols=T.Symbol.array,
                        vars=LogicVarArray):
 
-        def index_of(symbol, then, els):
-            return Let(lambda sym=symbol: symbols.filtermap(
-                lambda i, e: i,
-                lambda e: e == sym
-            ).then(
-                lambda x: Let(lambda idx=x.at(0): then(idx)),
-                default_val=els
-            ))
+        def if_is_metavar(symbol, then, els):
+            return If(
+                symbols.contains(symbol),
+                then,
+                els
+            )
 
         def to_logic(bool):
             return If(bool, LogicTrue(), LogicFalse())
@@ -245,10 +243,10 @@ class DefTerm(DependzNode):
                 then,
                 default_val=UnifyEquation.new(
                     eq=other.cast(Identifier).then(
-                        lambda oid: index_of(
+                        lambda oid: if_is_metavar(
                             oid.sym,
-                            lambda idx: Bind(
-                                vars.elem(idx), Self.as_bare_entity,
+                            Bind(
+                                vars.elem(oid.sym), Self.as_bare_entity,
                                 eq_prop=DefTerm.equivalent_entities
                             ),
                             LogicFalse()
@@ -261,26 +259,26 @@ class DefTerm(DependzNode):
 
         return Self.match(
             lambda id=Identifier: UnifyEquation.new(
-                eq=index_of(
+                eq=if_is_metavar(
                     id.sym,
-                    lambda idx: other.cast(Identifier).then(
-                        lambda oid: index_of(
+                    other.cast(Identifier).then(
+                        lambda oid: if_is_metavar(
                             oid.sym,
-                            lambda idx2: Bind(
-                                vars.elem(idx), vars.elem(idx2),
-                                eq_prop=DefTerm.equivalent_entities
-                            ),
-                            Bind(vars.elem(idx), other.as_bare_entity,
+                            Bind(vars.elem(id.sym), vars.elem(oid.sym),
+                                 eq_prop=DefTerm.equivalent_entities),
+                            Bind(vars.elem(id.sym), other.as_bare_entity,
                                  eq_prop=DefTerm.equivalent_entities)
                         ),
-                        default_val=Bind(vars.elem(idx), other.as_bare_entity,
-                                         eq_prop=DefTerm.equivalent_entities)
+                        default_val=Bind(
+                            vars.elem(id.sym), other.as_bare_entity,
+                            eq_prop=DefTerm.equivalent_entities
+                        )
                     ),
                     other.cast(Identifier).then(
-                        lambda oid: index_of(
+                        lambda oid: if_is_metavar(
                             oid.sym,
-                            lambda idx: Bind(
-                                vars.elem(idx), Self.as_bare_entity,
+                            Bind(
+                                vars.elem(oid.sym), Self.as_bare_entity,
                                 eq_prop=DefTerm.equivalent_entities
                             ),
                             to_logic(id.equivalent(other))

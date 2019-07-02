@@ -1,3 +1,5 @@
+Type1 : Type2
+Type : Type1
 Nat : Type
 Z : Nat
 S : Nat -> Nat
@@ -26,4 +28,27 @@ test_2 = foo (id Z) Nil
 
 test_3 : m:Nat -> Vec Nat m -> Nat
 test_3 = foo
+
+filled : n:Nat -> t -> Vec t n
+
+test_4 : m:Nat -> Nat -> Vec Nat m
+test_4 = \x. \y. filled x Z
+
+bar : (S n):Nat -> Nat
+
+test_5 : Nat
+test_5 = bar (S (S Z))
+
+test_6 : (S n):Nat -> Nat -> Vec Nat (S n)
+test_6 = \x. \y. filled x Z
+
+elim_nat : t:tp -> P:(Nat -> t) -> P Z -> (k:Nat -> P (S k)) -> x:Nat -> P x
+
+tes_elim : Nat -> Nat
+tes_elim = elim_nat Type (\x. Nat) Z id
+
+truc : P:(Nat -> Type) -> P Z -> (k:Nat -> P k) -> Nat
+
+tes_truc : Nat
+tes_truc = truc (\x. Vec Nat x) Nil (\x. filled x Z)
 

@@ -25,7 +25,7 @@ def run(src_file):
         def_name = d.f_ident.text
 
         try:
-            r = d.p_check_domains()
+            r = d.p_check_domains(3)
         except ldl.PropertyError:
             r = False
 
@@ -39,7 +39,7 @@ def run(src_file):
             print("{} : Failed".format(def_name))
 
             try:
-                d.p_check_domains()
+                d.p_check_domains(3)
             except ldl.PropertyError:
                 print("A crash occurred while domain checking {}.".format(
                     def_name

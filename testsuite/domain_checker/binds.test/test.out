@@ -1,22 +1,50 @@
 test_1: Success
-  <Apply test.dep:19:10-19:32>: Nat
-  <Apply test.dep:19:10-19:19>: (((Vec Nat) (S Z)) -> Nat)
-  <SourceId test.dep:19:10-19:13>: (Nat -> (((Vec Nat) (S Z)) -> Nat))
-  <Apply test.dep:19:15-19:18>: Nat
-  <SourceId test.dep:19:15-19:16>: (Nat -> Nat)
-  <SourceId test.dep:19:17-19:18>: Nat
-  <Apply test.dep:19:21-19:31>: ((Vec Nat) (S Z))
-  <Apply test.dep:19:21-19:27>: (((Vec Nat) Z) -> ((Vec Nat) (S Z)))
-  <SourceId test.dep:19:21-19:25>: (Nat -> (((Vec Nat) Z) -> ((Vec Nat) (S Z))))
-  <SourceId test.dep:19:26-19:27>: Nat
-  <SourceId test.dep:19:28-19:31>: ((Vec Nat) Z)
+  <Apply test.dep:21:10-21:32>: Nat
+  <Apply test.dep:21:10-21:19>: (((Vec Nat) (S Z)) -> Nat)
+  <SourceId test.dep:21:10-21:13>: ((S Z):Nat -> (((Vec Nat) (S Z)) -> Nat))
+  <Apply test.dep:21:15-21:18>: Nat
+  <SourceId test.dep:21:15-21:16>: (Nat -> Nat)
+  <SourceId test.dep:21:17-21:18>: Nat
+  <Apply test.dep:21:21-21:31>: ((Vec Nat) (S Z))
+  <Apply test.dep:21:21-21:27>: (((Vec Nat) Z) -> ((Vec Nat) (S Z)))
+  <SourceId test.dep:21:21-21:25>: (Nat -> (((Vec Nat) Z) -> ((Vec Nat) (S Z))))
+  <SourceId test.dep:21:26-21:27>: Nat
+  <SourceId test.dep:21:28-21:31>: ((Vec Nat) Z)
 test_2: Success
-  <Apply test.dep:25:10-25:24>: Nat
-  <Apply test.dep:25:10-25:20>: (((Vec Nat) Z) -> Nat)
-  <SourceId test.dep:25:10-25:13>: (Nat -> (((Vec Nat) Z) -> Nat))
-  <Apply test.dep:25:15-25:19>: Nat
-  <SourceId test.dep:25:15-25:17>: (Nat -> Nat)
-  <SourceId test.dep:25:18-25:19>: Nat
-  <SourceId test.dep:25:21-25:24>: ((Vec Nat) Z)
+  <Apply test.dep:27:10-27:24>: Nat
+  <Apply test.dep:27:10-27:20>: (((Vec Nat) Z) -> Nat)
+  <SourceId test.dep:27:10-27:13>: (Z:Nat -> (((Vec Nat) Z) -> Nat))
+  <Apply test.dep:27:15-27:19>: Nat
+  <SourceId test.dep:27:15-27:17>: (Nat -> Nat)
+  <SourceId test.dep:27:18-27:19>: Nat
+  <SourceId test.dep:27:21-27:24>: ((Vec Nat) Z)
 test_3: Success
-  <SourceId test.dep:28:10-28:13>: (m:Nat -> (((Vec Nat) m) -> Nat))
+  <SourceId test.dep:30:10-30:13>: (m:Nat -> (((Vec Nat) m) -> Nat))
+test_4: Success
+  <Abstraction test.dep:35:10-35:28>: (m:Nat -> (Nat -> ((Vec Nat) m)))
+  <SourceId test.dep:35:11-35:12>: Nat
+  <Abstraction test.dep:35:14-35:28>: (Nat -> ((Vec Nat) m))
+  <SourceId test.dep:35:15-35:16>: Nat
+  <Apply test.dep:35:18-35:28>: ((Vec Nat) m)
+  <Apply test.dep:35:18-35:26>: (Nat -> ((Vec Nat) m))
+  <SourceId test.dep:35:18-35:24>: (m:Nat -> (Nat -> ((Vec Nat) m)))
+  <SourceId test.dep:35:25-35:26>: Nat
+  <SourceId test.dep:35:27-35:28>: Nat
+test_5: Success
+  <Apply test.dep:40:10-40:23>: Nat
+  <SourceId test.dep:40:10-40:13>: ((S (S Z)):Nat -> Nat)
+  <Apply test.dep:40:15-40:22>: Nat
+  <SourceId test.dep:40:15-40:16>: (Nat -> Nat)
+  <Apply test.dep:40:18-40:21>: Nat
+  <SourceId test.dep:40:18-40:19>: (Nat -> Nat)
+  <SourceId test.dep:40:20-40:21>: Nat
+test_6: Success
+  <Abstraction test.dep:43:10-43:28>: ((S n):Nat -> (Nat -> ((Vec Nat) (S n))))
+  <SourceId test.dep:43:11-43:12>: Nat
+  <Abstraction test.dep:43:14-43:28>: (Nat -> ((Vec Nat) (S n)))
+  <SourceId test.dep:43:15-43:16>: Nat
+  <Apply test.dep:43:18-43:28>: ((Vec Nat) (S n))
+  <Apply test.dep:43:18-43:26>: (Nat -> ((Vec Nat) (S n)))
+  <SourceId test.dep:43:18-43:24>: ((S n):Nat -> (Nat -> ((Vec Nat) (S n))))
+  <SourceId test.dep:43:25-43:26>: Nat
+  <SourceId test.dep:43:27-43:28>: Nat

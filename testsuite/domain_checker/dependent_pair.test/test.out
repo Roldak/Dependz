@@ -9,7 +9,7 @@ test_pair: Success
 test_dpair: Success
   <Apply test.dep:26:14-26:39>: ((DPair Nat) (Vec Nat))
   <Apply test.dep:26:14-26:26>: (((Vec Nat) (S Z)) -> ((DPair Nat) (Vec Nat)))
-  <SourceId test.dep:26:14-26:20>: (Nat -> (((Vec Nat) (S Z)) -> ((DPair Nat) (Vec Nat))))
+  <SourceId test.dep:26:14-26:20>: ((S Z):Nat -> (((Vec Nat) (S Z)) -> ((DPair Nat) (Vec Nat))))
   <Apply test.dep:26:22-26:25>: Nat
   <SourceId test.dep:26:22-26:23>: (Nat -> Nat)
   <SourceId test.dep:26:24-26:25>: Nat

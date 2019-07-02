@@ -69,8 +69,8 @@ class DependzNode(ASTNode):
 
     @langkit_property(public=True, memoized=True)
     def make_arrow(t1=T.DefTerm, t2=T.DefTerm,
-                   ident=(T.Identifier, No(T.Identifier))):
-        return SyntheticArrow.new(lhs=t1, rhs=t2, binder=ident)
+                   t3=(T.Term, No(T.Term))):
+        return SyntheticArrow.new(lhs=t1, rhs=t2, binder=t3)
 
     @langkit_property(return_type=T.LogicVarArray, memoized=True)
     def make_logic_var_array():
@@ -150,7 +150,7 @@ class DefTerm(DependzNode):
             lambda a=Arrow: a.parent.make_arrow(
                 a.lhs.dnorm,
                 a.rhs.dnorm,
-                a.binder
+                a.binder._.normalize
             )
         )
 
@@ -161,7 +161,7 @@ class DefTerm(DependzNode):
             lambda ar=Arrow: Self.parent.make_arrow(
                 ar.lhs.renamed_domain(old, by),
                 ar.rhs.renamed_domain(old, by),
-                ar.binder._.rename(old, by).cast(Identifier)
+                ar.binder._.rename(old, by)
             )
         )
 
@@ -172,11 +172,7 @@ class DefTerm(DependzNode):
             lambda ar=Arrow: Self.parent.make_arrow(
                 ar.lhs.substituted_domain(sym, val),
                 ar.rhs.substituted_domain(sym, val),
-                ar.binder.then(lambda b: If(
-                    b.sym == sym,
-                    No(Identifier),
-                    b
-                ))
+                ar.binder._.substitute(sym, val.cast_or_raise(Term))
             )
         )
 
@@ -206,7 +202,14 @@ class DefTerm(DependzNode):
             lambda ar=Arrow: other.cast(Arrow).then(
                 lambda o: And(
                     ar.lhs.equivalent(o.lhs),
-                    ar.rhs.equivalent(o.rhs)
+                    ar.rhs.equivalent(o.rhs),
+                    ar.binder.then(
+                        lambda b: o.binder.then(
+                            lambda ob: b.equivalent(ob),
+                            default_val=False
+                        ),
+                        default_val=o.binder.is_null
+                    )
                 )
             )
         )
@@ -226,17 +229,22 @@ class DefTerm(DependzNode):
         def to_logic(bool):
             return If(bool, LogicTrue(), LogicFalse())
 
-        def combine(lhs, other_lhs, rhs, other_rhs):
-            return Let(
-                lambda
-                e1=lhs.unify_equation(other_lhs, symbols, vars),
-                e2=rhs.unify_equation(other_rhs, symbols, vars):
+        def combine(x, y, *others):
+            assert (len(others) % 2 == 0)
 
-                UnifyEquation.new(
-                    eq=And(e1.eq, e2.eq),
-                    renamings=e1.renamings.concat(e2.renamings)
+            if len(others) == 0:
+                return x.unify_equation(y, symbols, vars)
+            else:
+                return Let(
+                    lambda
+                    e1=x.unify_equation(y, symbols, vars),
+                    e2=combine(*others):
+
+                    UnifyEquation.new(
+                        eq=And(e1.eq, e2.eq),
+                        renamings=e1.renamings.concat(e2.renamings)
+                    )
                 )
-            )
 
         def unify_case(expected_type, then):
             return other.cast(expected_type).then(
@@ -321,9 +329,24 @@ class DefTerm(DependzNode):
 
             lambda ar=Arrow: unify_case(
                 Arrow,
-                lambda oar: combine(
-                    ar.lhs, oar.lhs,
-                    ar.rhs, oar.rhs
+                lambda oar: Cond(
+                    And(ar.binder.is_null, oar.binder.is_null),
+                    combine(
+                        ar.lhs, oar.lhs,
+                        ar.rhs, oar.rhs
+                    ),
+
+                    Or(ar.binder.is_null, oar.binder.is_null),
+                    UnifyEquation.new(
+                        eq=LogicFalse(),
+                        renamings=No(Renaming.array)
+                    ),
+
+                    combine(
+                        ar.lhs, oar.lhs,
+                        ar.rhs, oar.rhs,
+                        ar.binder, oar.binder
+                    )
                 )
             )
         )
@@ -361,15 +384,16 @@ class DefTerm(DependzNode):
 
     @langkit_property(public=True, return_type=T.Symbol.array)
     def free_symbols_impl(deep=T.Bool, cur_depth=T.Int):
-        def combine(lhs, rhs, inc_on_lhs):
-            return Let(
-                lambda l=lhs.free_symbols_impl(
-                    deep, (cur_depth + 1) if inc_on_lhs else cur_depth
-                ):
+        def combine(l, r):
+            return l.concat(r.filter(
+                lambda s: Not(l.contains(s))
+            ))
 
-                l.concat(rhs.free_symbols_impl(deep, cur_depth).filter(
-                    lambda s: Not(l.contains(s))
-                ))
+        def rec(node, inc_depth, then):
+            return Let(
+                lambda l=node.free_symbols_impl(
+                    deep, (cur_depth + 1) if inc_depth else cur_depth
+                ): then(l)
             )
 
         return Self.match(
@@ -377,15 +401,36 @@ class DefTerm(DependzNode):
                 lambda _: No(T.Symbol.array),
                 default_val=id.sym.singleton
             ),
+
             lambda ab=Abstraction:
             ab.term.free_symbols_impl(deep, cur_depth).filter(
                 lambda s: s != ab.ident.sym
             ),
-            lambda ap=Apply: combine(ap.lhs, ap.rhs, False),
+
+            lambda ap=Apply: rec(
+                ap.lhs, False,
+                lambda l: rec(
+                    ap.rhs, False,
+                    lambda r: combine(l, r)
+                )
+            ),
+
             lambda ar=Arrow: If(
                 And(Not(deep), cur_depth > 0),
                 No(T.Symbol.array),
-                combine(ar.lhs, ar.rhs, True),
+                rec(
+                    ar.lhs, True,
+                    lambda l: rec(
+                        ar.rhs, False,
+                        lambda r: ar.binder.then(
+                            lambda b: rec(
+                                b, False,
+                                lambda x: combine(x, combine(l, r))
+                            ),
+                            default_val=combine(l, r)
+                        )
+                    )
+                )
             )
         )
 
@@ -771,7 +816,7 @@ class SyntheticAbstraction(Abstraction):
 
 
 class Arrow(DefTerm):
-    binder = Field(type=Identifier)
+    binder = Field(type=Term)
     lhs = Field(type=DefTerm)
     rhs = Field(type=DefTerm)
 

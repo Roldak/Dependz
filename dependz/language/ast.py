@@ -650,11 +650,12 @@ class Term(DefTerm):
             default_val=result
         )
 
-    @langkit_property(public=True, return_type=Binding.array,
+    @langkit_property(public=False, return_type=Binding.array,
                       activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def instantiate_templates(result_domain=T.DefTerm,
                               templates=Template.array,
-                              formals=T.Symbol.array):
+                              formals=T.Symbol.array,
+                              reps=T.Substitution.array):
         def make_binding(domain):
             return Binding.new(
                 target=Self,
@@ -671,12 +672,12 @@ class Term(DefTerm):
             return Let(
                 lambda
                 lhs_res=ap.lhs.instantiate_templates(
-                    No(T.DefTerm), templates, formals
+                    No(T.DefTerm), templates, formals, reps
                 ): Let(
                     lambda
                     rhs_res=ap.rhs.instantiate_templates(
                         lhs_res.at(0).domain_val.cast(Arrow).lhs,
-                        templates, formals
+                        templates, formals, reps
                     ):
 
                     f(lhs_res, rhs_res)
@@ -702,7 +703,9 @@ class Term(DefTerm):
                             lhs_res.at(0).domain_val.cast(Arrow).binder.then(
                                 lambda b: UnifyQuery.new(
                                     first=b,
-                                    second=rhs_res.at(0).target.dnorm
+                                    second=rhs_res.at(0).target.substitute_all(
+                                        reps
+                                    ).dnorm
                                 ).singleton
                             )
                         ),
@@ -729,7 +732,15 @@ class Term(DefTerm):
                 lambda
                 term_res=ab.term.instantiate_templates(
                     result_domain._.cast(Arrow).rhs,
-                    templates, formals
+                    templates, formals,
+                    reps.filter(
+                        lambda s: s.from_symbol != ab.ident.sym
+                    ).concat(result_domain._.cast(Arrow).binder.then(
+                        lambda b: Substitution.new(
+                            from_symbol=ab.ident.sym,
+                            to_term=b
+                        ).singleton
+                    ))
                 ):
 
                 make_binding(
@@ -737,7 +748,8 @@ class Term(DefTerm):
                         ab.ident.domain_val._or(
                             result_domain._.cast(Arrow).lhs
                         ),
-                        term_res.at(0).domain_val
+                        term_res.at(0).domain_val,
+                        result_domain._.cast(Arrow).binder
                     )
                 ).singleton.concat(term_res)
             )
@@ -915,7 +927,8 @@ class Definition(DependzNode):
                 Self.term.instantiate_templates(
                     expected_domain.node,
                     instances,
-                    instances.mapcat(lambda i: i.instance.free_symbols)
+                    instances.mapcat(lambda i: i.instance.free_symbols),
+                    No(Substitution.array)
                 ).then(lambda result: Self.check_domains_internal(
                     expected_domain,
                     result.filter(

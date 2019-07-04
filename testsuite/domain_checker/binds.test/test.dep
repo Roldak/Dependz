@@ -44,11 +44,9 @@ test_6 = \x. \y. filled x Z
 
 elim_nat : t:tp -> P:(Nat -> t) -> P Z -> (k:Nat -> P (S k)) -> x:Nat -> P x
 
-tes_elim : Nat -> Nat
-tes_elim = elim_nat Type (\x. Nat) Z id
+test_elim : j:Nat -> Nat
+test_elim = elim_nat Type (\x. Nat) Z id
 
-truc : P:(Nat -> Type) -> P Z -> (k:Nat -> P k) -> Nat
-
-tes_truc : Nat
-tes_truc = truc (\x. Vec Nat x) Nil (\x. filled x Z)
+tes_elim_2 : n:Nat -> Vec Nat n
+tes_elim_2 = elim_nat Type (\y. Vec Nat y) Nil (\y. Cons Z (test_elim_2 y))
 

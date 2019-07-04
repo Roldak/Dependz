@@ -206,9 +206,9 @@ class DefTerm(DependzNode):
                     ar.binder.then(
                         lambda b: o.binder.then(
                             lambda ob: b.equivalent(ob),
-                            default_val=False
+                            default_val=Not(ar.has_constraining_binder)
                         ),
-                        default_val=o.binder.is_null
+                        default_val=Not(o.has_constraining_binder)
                     )
                 )
             )
@@ -330,7 +330,15 @@ class DefTerm(DependzNode):
             lambda ar=Arrow: unify_case(
                 Arrow,
                 lambda oar: Cond(
-                    And(ar.binder.is_null, oar.binder.is_null),
+                    Or(
+                        And(ar.binder.is_null, oar.binder.is_null),
+                        Or(
+                            ar.binder.is_null
+                            & Not(oar.has_constraining_binder),
+                            oar.binder.is_null
+                            & Not(ar.has_constraining_binder)
+                        )
+                    ),
                     combine(
                         ar.lhs, oar.lhs,
                         ar.rhs, oar.rhs
@@ -434,6 +442,24 @@ class DefTerm(DependzNode):
             )
         )
 
+    @langkit_property(return_type=T.Bool, public=True)
+    def is_free(sym=T.Symbol):
+        return Self.match(
+            lambda id=Identifier:
+            id.sym == sym,
+
+            lambda ap=Apply:
+            ap.lhs.is_free(sym) | ap.rhs.is_free(sym),
+
+            lambda ab=Abstraction:
+            (ab.ident.sym != sym) | ab.term.is_free(sym),
+
+            lambda ar=Arrow:
+            ar.lhs.is_free(sym)
+            | ar.rhs.is_free(sym)
+            | ar.binder._.is_free(sym)
+        )
+
 
 @abstract
 class Term(DefTerm):
@@ -527,14 +553,6 @@ class Term(DefTerm):
                     ab.term.rename(old, by)
                 )
             )
-        )
-
-    @langkit_property(return_type=T.Bool, public=True)
-    def is_free(sym=T.Symbol):
-        return Self.match(
-            lambda id=Identifier: id.sym == sym,
-            lambda ap=Apply: ap.lhs.is_free(sym) | ap.rhs.is_free(sym),
-            lambda ab=Abstraction: (ab.ident.sym != sym) | ab.term.is_free(sym)
         )
 
     @langkit_property(return_type=T.LogicVar, memoized=True)
@@ -848,6 +866,19 @@ class Arrow(DefTerm):
     @langkit_property(return_type=DefTerm.entity)
     def result():
         return Entity.rhs.normalized_domain
+
+    @langkit_property(return_type=T.Bool)
+    def has_constraining_binder():
+        return Self.binder.then(
+            lambda b: b.cast(Identifier).then(
+                lambda id: If(
+                    id.intro.is_null,
+                    Self.lhs.is_free(id.sym) | Self.rhs.is_free(id.sym),
+                    True
+                ),
+                default_val=True
+            )
+        )
 
 
 @synthetic

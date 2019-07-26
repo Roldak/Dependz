@@ -28,6 +28,7 @@ class Substitution(Struct):
 class Template(Struct):
     origin = UserField(type=T.Term)
     instance = UserField(type=T.DefTerm)
+    new_symbols = UserField(type=T.Symbol.array)
 
 
 class Binding(Struct):
@@ -911,6 +912,7 @@ class Introduction(DependzNode):
         return Template.new(
             origin=origin_term,
             instance=Self.term.rename_all(renamings).dnorm,
+            new_symbols=renamings.map(lambda r: r.to_symbol)
         )
 
     env_spec = EnvSpec(
@@ -945,7 +947,6 @@ class Definition(DependzNode):
             Bind(Self.term.domain_var, expected_domain),
             term_eq.eq
         ))
-        self_formals = Var(Self.ident.intro.generic_formals)
         return term_eq.templates.then(
             lambda templates: (tries != 0) & Try(
                 domain_eq.solve,
@@ -964,7 +965,9 @@ class Definition(DependzNode):
                     expected_domain,
                     result.filter(
                         lambda b: b.domain_val.free_symbols.all(
-                            lambda sym: self_formals.contains(sym)
+                            lambda sym: Not(instances.any(
+                                lambda i: i.new_symbols.contains(sym)
+                            ))
                         )
                     ),
                     tries - 1

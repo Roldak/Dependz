@@ -48,3 +48,15 @@ test_6: Success
   <SourceId test.dep:43:18-43:24>: ((S n):Nat -> (Nat -> ((Vec Nat) (S n))))
   <SourceId test.dep:43:25-43:26>: Nat
   <SourceId test.dep:43:27-43:28>: Nat
+test_elim: Success
+  <Apply test.dep:48:13-48:41>: (j:Nat -> Nat)
+  <Apply test.dep:48:13-48:38>: ((k:Nat -> Nat) -> (j:Nat -> Nat))
+  <Apply test.dep:48:13-48:36>: (Nat -> ((k:Nat -> Nat) -> (j:Nat -> Nat)))
+  <Apply test.dep:48:13-48:26>: ((\x. Nat):(Nat -> Type) -> (Nat -> ((k:Nat -> Nat) -> (j:Nat -> Nat))))
+  <SourceId test.dep:48:13-48:21>: (Type:Type1 -> ((\x. Nat):(Nat -> Type) -> (Nat -> ((k:Nat -> Nat) -> (j:Nat -> Nat)))))
+  <SourceId test.dep:48:22-48:26>: Type1
+  <Abstraction test.dep:48:28-48:35>: (Nat -> Type)
+  <SourceId test.dep:48:29-48:30>: Nat
+  <SourceId test.dep:48:32-48:35>: Type
+  <SourceId test.dep:48:37-48:38>: Nat
+  <SourceId test.dep:48:39-48:41>: (Nat -> Nat)

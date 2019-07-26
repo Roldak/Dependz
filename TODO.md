@@ -1,23 +1,4 @@
-- Fix following case which typechecks:
-    ```
-    A : random_type
-    A = B
-    ```
-  This is due to missing domain equations.
 
-- Fix `free_symbols` in the following case:
-    `t:X -> (t -> t) -> Y`
-  This should return `[t]` (assuming `X, Y` are constants), but
-  it returns `[]` currently because binder is not taken into
-  account and `(t -> t)` is deeper.
-
-- Make following code typecheck:
-    ```
-    filled : n:Nat -> t -> Vec t n
-
-    test : n:Nat -> Nat -> Vec Nat n
-    test = \x. \y. filled x Z
-    ```
 - And the following not typecheck:
     ```
     test : n:Nat -> Nat -> Vec Nat n
@@ -30,3 +11,21 @@
     test = \x. \y. filled n Z
     ```
 
+- Address the following:
+    ```
+    n:Nat -> (n:Nat -> Vec Nat n)
+    ```
+    Where the second occurrence of `n:Nat` is _constraining_ but
+    is currently not considered so. Solutions:
+    - Forbid this pattern
+    - Fix `has_constaining_binder` (implem or callers)
+
+- Re-type arrows that have unconstraining binders to remove the
+  binder altogether. E.g:
+  ```
+  foo : x:Nat -> Nat
+  test : Nat -> Nat
+  test = foo
+  ```
+  Should typecheck and `foo` should have type `Nat -> Nat`
+  (and not `x$XX:Nat -> Nat`)

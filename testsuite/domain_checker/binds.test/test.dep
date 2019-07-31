@@ -42,11 +42,3 @@ test_5 = bar (S (S Z))
 test_6 : (S n):Nat -> Nat -> Vec Nat (S n)
 test_6 = \x. \y. filled x Z
 
-elim_nat : t:tp -> P:(Nat -> t) -> P Z -> (k:Nat -> P (S k)) -> x:Nat -> P x
-
-test_elim : j:Nat -> Nat
-test_elim = elim_nat Type (\x. Nat) Z id
-
-tes_elim_2 : n:Nat -> Vec Nat n
-tes_elim_2 = elim_nat Type (\y. Vec Nat y) Nil (\y. Cons Z (test_elim_2 y))
-

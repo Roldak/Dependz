@@ -1,0 +1,21 @@
+Type1 : Type2
+Type : Type1
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+Vec : Type -> Nat -> Type
+Nil : Vec t Z
+Cons : t -> Vec t n -> Vec t (S n)
+
+id : t -> t
+id = \x. x
+
+elim_nat : t:tp -> P:(Nat -> t) -> P Z -> (k:Nat -> P (S k)) -> x:Nat -> P x
+
+test_elim : j:Nat -> Nat
+test_elim = elim_nat Type (\x. Nat) Z id
+
+test_elim_2 : n:Nat -> Vec Nat n
+test_elim_2 = elim_nat Type (\y. Vec Nat y) Nil (\y. Cons Z (test_elim_2 y))
+

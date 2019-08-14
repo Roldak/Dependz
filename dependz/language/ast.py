@@ -691,7 +691,13 @@ class Term(DefTerm):
             return Let(
                 lambda
                 lhs_res=ap.lhs.instantiate_templates(
-                    No(T.DefTerm), templates, formals, reps
+                    Self.parent.make_arrow(
+                        No(T.DefTerm),
+                        result_domain
+                    ),
+                    templates,
+                    formals,
+                    reps
                 ): Let(
                     lambda
                     rhs_res=ap.rhs.instantiate_templates(
@@ -855,8 +861,8 @@ class Arrow(DefTerm):
     def to_string():
         return String('(').concat(Self.binder.then(
             lambda b: b.to_string.concat(String(':'))
-            .concat(Self.lhs.to_string),
-            default_val=Self.lhs.to_string
+            .concat(Self.lhs._.to_string),
+            default_val=Self.lhs._.to_string
         ).concat(String(' -> ')).concat(Self.rhs.to_string)
          .concat(String(')')))
 

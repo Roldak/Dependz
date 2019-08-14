@@ -216,9 +216,9 @@ class DefTerm(DependzNode):
         )
 
     @langkit_property(return_type=UnifyEquation, uses_entity_info=False)
-    def unify_equation(other=T.DefTerm,
-                       symbols=T.Symbol.array,
-                       vars=LogicVarArray):
+    def first_order_unify_equation(other=T.DefTerm,
+                                   symbols=T.Symbol.array,
+                                   vars=LogicVarArray):
 
         def if_is_metavar(symbol, then, els):
             return If(
@@ -320,23 +320,11 @@ class DefTerm(DependzNode):
                 )
             ),
 
-            lambda ap=Apply: Let(
-                lambda res=unify_case(
-                    Apply,
-                    lambda oap: combine(
-                        ap.lhs, oap.lhs,
-                        ap.rhs, oap.rhs
-                    )
-                ): if_is_metavar(
-                    ap.lhs.cast(Identifier)._.sym,
-                    UnifyEquation.new(
-                        eq=Or(
-                            res.eq,
-                            LogicTrue()
-                        ),
-                        renamings=res.renamings
-                    ),
-                    res
+            lambda ap=Apply: unify_case(
+                Apply,
+                lambda oap: combine(
+                    ap.lhs, oap.lhs,
+                    ap.rhs, oap.rhs
                 )
             ),
 
@@ -370,6 +358,105 @@ class DefTerm(DependzNode):
                     )
                 )
             )
+        )
+
+    @langkit_property(return_type=T.Equation)
+    def higher_order_unification(arg=T.Term, res=T.Term, metavar=T.LogicVar):
+        return If(
+            arg.equivalent(res),
+
+            Or(
+                Bind(
+                    metavar,
+                    Self.parent.make_abstraction(
+                        Self.parent.make_ident(Self.fresh_symbol("ho")),
+                        res
+                    ).as_bare_entity,
+                    eq_prop=DefTerm.equivalent_entities
+                ),
+                Let(lambda sym=Self.fresh_symbol("ho"): Bind(
+                    metavar,
+                    Self.parent.make_abstraction(
+                        Self.parent.make_ident(sym),
+                        Self.parent.make_ident(sym)
+                    ).as_bare_entity,
+                    eq_prop=DefTerm.equivalent_entities
+                ))
+            ),
+
+            Bind(
+                metavar,
+                Self.parent.make_abstraction(
+                    Self.parent.make_ident(Self.fresh_symbol("ho")),
+                    res
+                ).as_bare_entity,
+                eq_prop=DefTerm.equivalent_entities
+            )
+        )
+
+    @langkit_property(return_type=UnifyEquation, uses_entity_info=False)
+    def unify_equation(other=T.DefTerm,
+                       symbols=T.Symbol.array,
+                       vars=LogicVarArray):
+
+        def outermost_metavar_application_of(term):
+            return term.cast(Apply)._.left_most_term.cast(Identifier).then(
+                lambda id: If(
+                    And(symbols.contains(id.sym),
+                        Not(term.parent.cast(Apply)._.lhs == term)),
+                    id,
+                    No(Identifier)
+                )
+            )
+
+        self_hoa = Var(outermost_metavar_application_of(Self))
+        other_hoa = Var(outermost_metavar_application_of(other))
+
+        first_order_res = Var(
+            Self.first_order_unify_equation(other, symbols, vars)
+        )
+
+        return Cond(
+            And(Not(self_hoa.is_null),
+                Self.cast(Apply).lhs == self_hoa,
+                other.is_a(Term)),
+            UnifyEquation.new(
+                eq=Or(
+                    first_order_res.eq,
+                    Self.higher_order_unification(
+                        Self.cast(Apply).rhs,
+                        other.cast_or_raise(Term),
+                        vars.elem(self_hoa.sym)
+                    )
+                ),
+                renamings=first_order_res.renamings
+            ),
+
+            And(Not(other_hoa.is_null),
+                other.cast(Apply).lhs == other_hoa,
+                Self.is_a(Term)),
+            UnifyEquation.new(
+                eq=Or(
+                    first_order_res.eq,
+                    other.higher_order_unification(
+                        other.cast(Apply).rhs,
+                        Self.cast_or_raise(Term),
+                        vars.elem(other_hoa.sym)
+                    )
+                ),
+                renamings=first_order_res.renamings
+            ),
+
+            Or(Not(self_hoa.is_null), Not(other_hoa.is_null)),
+            UnifyEquation.new(
+                eq=Or(
+                    first_order_res.eq,
+                    LogicTrue()
+                ),
+                renamings=first_order_res.renamings
+            ),
+
+            first_order_res
         )
 
     @langkit_property(return_type=T.DefTerm)
@@ -843,6 +930,13 @@ class Apply(Term):
     to_string = Property(String("(").concat(
         Self.lhs.to_string.concat(String(' ')).concat(Self.rhs.to_string)
     ).concat(String(")")))
+
+    @langkit_property(return_type=Term)
+    def left_most_term():
+        return Self.lhs.cast(Apply).then(
+            lambda ap: ap.left_most_term,
+            default_val=Self.lhs
+        )
 
 
 @synthetic

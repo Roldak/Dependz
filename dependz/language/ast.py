@@ -320,11 +320,23 @@ class DefTerm(DependzNode):
                 )
             ),
 
-            lambda ap=Apply: unify_case(
-                Apply,
-                lambda oap: combine(
-                    ap.lhs, oap.lhs,
-                    ap.rhs, oap.rhs
+            lambda ap=Apply: Let(
+                lambda res=unify_case(
+                    Apply,
+                    lambda oap: combine(
+                        ap.lhs, oap.lhs,
+                        ap.rhs, oap.rhs
+                    )
+                ): if_is_metavar(
+                    ap.lhs.cast(Identifier)._.sym,
+                    UnifyEquation.new(
+                        eq=Or(
+                            res.eq,
+                            LogicTrue()
+                        ),
+                        renamings=res.renamings
+                    ),
+                    res
                 )
             ),
 

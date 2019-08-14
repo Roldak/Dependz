@@ -18,3 +18,13 @@ test_dpair: Success
   <SourceId test.dep:26:28-26:32>: (Nat -> (((Vec Nat) Z) -> ((Vec Nat) (S Z))))
   <SourceId test.dep:26:33-26:34>: Nat
   <SourceId test.dep:26:35-26:38>: ((Vec Nat) Z)
+test_dpair_2: Success
+  <Apply test.dep:29:16-29:39>: ((DPair Type) (\t. ((Vec t) (S Z))))
+  <Apply test.dep:29:16-29:26>: (((Vec Nat) (S Z)) -> ((DPair Type) (\t. ((Vec t) (S Z)))))
+  <SourceId test.dep:29:16-29:22>: (Nat:Type -> (((Vec Nat) (S Z)) -> ((DPair Type) (\t. ((Vec t) (S Z))))))
+  <SourceId test.dep:29:23-29:26>: Type
+  <Apply test.dep:29:28-29:38>: ((Vec Nat) (S Z))
+  <Apply test.dep:29:28-29:34>: (((Vec Nat) Z) -> ((Vec Nat) (S Z)))
+  <SourceId test.dep:29:28-29:32>: (Nat -> (((Vec Nat) Z) -> ((Vec Nat) (S Z))))
+  <SourceId test.dep:29:33-29:34>: Nat
+  <SourceId test.dep:29:35-29:38>: ((Vec Nat) Z)

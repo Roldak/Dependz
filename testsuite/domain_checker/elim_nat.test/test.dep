@@ -19,3 +19,5 @@ test_elim = elim_nat Z id
 test_elim_2 : n:Nat -> Vec Nat n
 test_elim_2 = elim_nat Nil (\y. Cons Z (test_elim_2 y))
 
+test_elim_3 : n:Nat -> Type
+test_elim_3 = elim_nat Nat (\n. Vec Nat Z)

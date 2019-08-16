@@ -51,6 +51,11 @@ class UnifyQuery(Struct):
     second = UserField(type=T.DefTerm)
 
 
+class TypingsDescription(Struct):
+    bindings = UserField(type=T.Binding.array)
+    equations = UserField(type=T.UnifyQuery.array)
+
+
 @abstract
 class DependzNode(ASTNode):
     """
@@ -98,23 +103,30 @@ class DependzNode(ASTNode):
 
     @langkit_property(return_type=Substitution.array,
                       activate_tracing=GLOBAL_ACTIVATE_TRACING)
-    def unify_all(queries=UnifyQuery.array, symbols=T.Symbol.array):
+    def unify_all(queries=UnifyQuery.array, symbols=T.Symbol.array,
+                  final=(Bool, False)):
         vars = Var(Self.make_logic_var_array)
         query_results = Var(queries.map(
             lambda q: q.first.unify_equation(
                 q.second,
                 symbols,
                 vars
-            ))
-        )
+            )
+        ))
         unify_eq = Var(query_results.logic_all(
-            lambda r: r.eq
+            lambda r: If(final, r.eq, Or(r.eq, LogicTrue()))
         ))
         renamings = Var(query_results.mapcat(
             lambda r: r.renamings
         ))
-        return If(
-            Try(unify_eq.solve, True),
+
+        ignore(Var(If(
+            Try(unify_eq.solve, True) | Not(final),
+            True,
+            PropertyError(Bool, "Unification failed")
+        )))
+
+        substs = Var(
             symbols.map(
                 lambda s: Substitution.new(
                     from_symbol=s,
@@ -122,8 +134,36 @@ class DependzNode(ASTNode):
                         renamings
                     )
                 )
-            ).filter(lambda s: Not(s.to_term.is_null)),
-            PropertyError(Substitution.array, "Unification failed")
+            ).filter(lambda s: Not(s.to_term.is_null))
+        )
+        new_queries = Var(queries.map(
+            lambda q: UnifyQuery.new(
+                first=q.first.substitute_all(substs).dnorm,
+                second=q.second.substitute_all(substs).dnorm
+            )
+        ))
+        left_symbols = Var(symbols.filter(
+            lambda sym: Not(substs.exists(
+                lambda subst: subst.from_symbol == sym
+            ))
+        ))
+        incomplete = And(
+            left_symbols.length > 0,
+            queries.any(lambda i, old_q: Let(
+                lambda new_q=new_queries.at(i): Or(
+                    Not(old_q.first.equivalent(new_q.first)),
+                    Not(old_q.second.equivalent(new_q.second))
+                )
+            ))
+        )
+        return Cond(
+            final,
+            substs,
+
+            incomplete,
+            substs.concat(Self.unify_all(new_queries, left_symbols)),
+
+            substs.concat(Self.unify_all(new_queries, left_symbols, True))
         )
 
 
@@ -768,22 +808,15 @@ class Term(DefTerm):
             default_val=result
         )
 
-    @langkit_property(public=False, return_type=Binding.array,
+    @langkit_property(public=False, return_type=TypingsDescription,
                       activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def instantiate_templates(result_domain=T.DefTerm,
                               templates=Template.array,
-                              formals=T.Symbol.array,
                               reps=T.Substitution.array):
         def make_binding(domain):
             return Binding.new(
                 target=Self,
                 domain_val=domain
-            )
-
-        def update_binding(b, new_domain):
-            return Binding.new(
-                target=b.target,
-                domain_val=new_domain
             )
 
         def rec_apply(ap, f):
@@ -795,13 +828,12 @@ class Term(DefTerm):
                         result_domain
                     ),
                     templates,
-                    formals,
                     reps
                 ): Let(
                     lambda
                     rhs_res=ap.rhs.instantiate_templates(
-                        lhs_res.at(0).domain_val.cast(Arrow).lhs,
-                        templates, formals, reps
+                        lhs_res.bindings.at(0).domain_val.cast(Arrow).lhs,
+                        templates, reps
                     ):
 
                     f(lhs_res, rhs_res)
@@ -809,45 +841,49 @@ class Term(DefTerm):
             )
 
         templated_result = Var(Self.match(
-            lambda id=Identifier: make_binding(
-                templates.find(lambda t: t.origin == id).then(
-                    lambda t: t.instance,
-                    default_val=id.domain_val._or(result_domain)
-                )
-            ).singleton,
+            lambda id=Identifier: TypingsDescription.new(
+                bindings=make_binding(
+                    templates.find(lambda t: t.origin == id).then(
+                        lambda t: t.instance,
+                        default_val=id.domain_val._or(result_domain)
+                    )
+                ).singleton,
+                equations=No(UnifyQuery.array)
+            ),
 
             lambda ap=Apply: rec_apply(
                 ap,
                 lambda lhs_res, rhs_res: Let(
-                    lambda substs=Self.unify_all(
-                        UnifyQuery.new(
-                            first=lhs_res.at(0).domain_val.cast(Arrow).lhs,
-                            second=rhs_res.at(0).domain_val
-                        ).singleton.concat(
-                            lhs_res.at(0).domain_val.cast(Arrow).binder.then(
-                                lambda b: UnifyQuery.new(
-                                    first=b,
-                                    second=rhs_res.at(0).target.substitute_all(
-                                        reps
-                                    ).dnorm
-                                ).singleton
-                            )
-                        ),
-                        formals
+                    lambda qs=UnifyQuery.new(
+                        first=lhs_res.bindings.at(0)
+                        .domain_val.cast(Arrow).lhs,
+                        second=rhs_res.bindings.at(0).domain_val
+                    ).singleton.concat(
+                        lhs_res.bindings.at(0)
+                        .domain_val.cast(Arrow).binder.then(
+                            lambda b: UnifyQuery.new(
+                                first=b,
+                                second=rhs_res.bindings.at(0)
+                                .target.substitute_all(reps).dnorm
+                            ).singleton
+                        )
                     ):
 
-                    Let(
-                        lambda
-                        new_bindings=lhs_res.concat(rhs_res).map(
-                            lambda b: update_binding(
-                                b, b.domain_val.substitute_all(substs).dnorm
-                            )
-                        ):
+                    TypingsDescription.new(
+                        bindings=make_binding(
+                            lhs_res.bindings.at(0)
+                            .domain_val.cast_or_raise(Arrow).rhs
+                        ).singleton.concat(
+                            lhs_res.bindings
+                        ).concat(
+                            rhs_res.bindings
+                        ),
 
-                        make_binding(
-                            new_bindings.at(0).domain_val.cast_or_raise(Arrow)
-                            .rhs
-                        ).singleton.concat(new_bindings)
+                        equations=lhs_res.equations.concat(
+                            rhs_res.equations
+                        ).concat(
+                            qs
+                        )
                     )
                 )
             ),
@@ -856,7 +892,7 @@ class Term(DefTerm):
                 lambda
                 term_res=ab.term.instantiate_templates(
                     result_domain._.cast(Arrow).rhs,
-                    templates, formals,
+                    templates,
                     reps.filter(
                         lambda s: s.from_symbol != ab.ident.sym
                     ).concat(result_domain._.cast(Arrow).binder.then(
@@ -867,26 +903,29 @@ class Term(DefTerm):
                     ))
                 ):
 
-                make_binding(
-                    Self.parent.make_arrow(
-                        ab.ident.domain_val._or(
-                            result_domain._.cast(Arrow).lhs
-                        ),
-                        term_res.at(0).domain_val,
-                        result_domain._.cast(Arrow).binder
-                    )
-                ).singleton.concat(term_res)
+                TypingsDescription.new(
+                    bindings=make_binding(
+                        Self.parent.make_arrow(
+                            ab.ident.domain_val._or(
+                                result_domain._.cast(Arrow).lhs
+                            ),
+                            term_res.bindings.at(0).domain_val,
+                            result_domain._.cast(Arrow).binder
+                        )
+                    ).singleton.concat(term_res.bindings),
+                    equations=term_res.equations
+                )
             )
         ))
 
         return Self.domain_val.then(
             lambda expected_dom: Let(
-                lambda substs=templated_result.at(0).domain_val.unify(
-                    expected_dom, formals
-                ): templated_result.map(
-                    lambda b: update_binding(
-                        b, b.domain_val.substitute_all(substs).dnorm
-                    )
+                lambda q=UnifyQuery.new(
+                    first=templated_result.bindings.at(0).domain_val,
+                    second=expected_dom
+                ): TypingsDescription.new(
+                    bindings=templated_result.bindings,
+                    equations=q.singleton.concat(templated_result.equations)
                 )
             ),
             default_val=templated_result
@@ -1071,15 +1110,25 @@ class Definition(DependzNode):
                 Self.term.instantiate_templates(
                     expected_domain.node,
                     instances,
-                    instances.mapcat(lambda i: i.instance.free_symbols),
                     No(Substitution.array)
                 ).then(lambda result: Self.check_domains_internal(
                     expected_domain,
-                    result.filter(
-                        lambda b: b.domain_val.free_symbols.all(
-                            lambda sym: Not(instances.any(
-                                lambda i: i.new_symbols.contains(sym)
-                            ))
+                    Let(
+                        lambda substs=Self.unify_all(
+                            result.equations,
+                            instances.mapcat(lambda i: i.instance.free_symbols)
+                        ): result.bindings.map(
+                            lambda b: Binding.new(
+                                target=b.target,
+                                domain_val=
+                                b.domain_val.substitute_all(substs).dnorm
+                            )
+                        ).filter(
+                            lambda b: b.domain_val.free_symbols.all(
+                                lambda sym: Not(instances.any(
+                                    lambda i: i.new_symbols.contains(sym)
+                                ))
+                            )
                         )
                     ),
                     tries - 1

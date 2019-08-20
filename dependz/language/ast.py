@@ -592,7 +592,7 @@ class DefTerm(DependzNode):
             ap.lhs.is_free(sym) | ap.rhs.is_free(sym),
 
             lambda ab=Abstraction:
-            (ab.ident.sym != sym) | ab.term.is_free(sym),
+            (ab.ident.sym != sym) & ab.term.is_free(sym),
 
             lambda ar=Arrow:
             ar.lhs.is_free(sym)

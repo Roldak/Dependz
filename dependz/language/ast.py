@@ -435,35 +435,37 @@ class DefTerm(DependzNode):
 
     @langkit_property(return_type=T.Equation)
     def higher_order_unification(arg=T.Term, res=T.Term, metavar=T.LogicVar):
+        fresh_sym = Var(Self.fresh_symbol("ho"))
+
+        imitate = Var(Bind(
+            metavar,
+            Self.parent.make_abstraction(
+                Self.parent.make_ident(fresh_sym),
+                res
+            ).as_bare_entity,
+            eq_prop=DefTerm.equivalent_entities
+        ))
+
+        project = Var(Bind(
+            metavar,
+            Self.parent.make_abstraction(
+                Self.parent.make_ident(fresh_sym),
+                Self.parent.make_ident(fresh_sym)
+            ).as_bare_entity,
+            eq_prop=DefTerm.equivalent_entities
+        ))
+
         return If(
             arg.equivalent(res),
 
             Or(
-                Bind(
-                    metavar,
-                    Self.parent.make_abstraction(
-                        Self.parent.make_ident(Self.fresh_symbol("ho")),
-                        res
-                    ).as_bare_entity,
-                    eq_prop=DefTerm.equivalent_entities
-                ),
-                Let(lambda sym=Self.fresh_symbol("ho"): Bind(
-                    metavar,
-                    Self.parent.make_abstraction(
-                        Self.parent.make_ident(sym),
-                        Self.parent.make_ident(sym)
-                    ).as_bare_entity,
-                    eq_prop=DefTerm.equivalent_entities
-                ))
+                imitate,
+                project
             ),
 
-            Bind(
-                metavar,
-                Self.parent.make_abstraction(
-                    Self.parent.make_ident(Self.fresh_symbol("ho")),
-                    res
-                ).as_bare_entity,
-                eq_prop=DefTerm.equivalent_entities
+            Or(
+                imitate,
+                LogicTrue()
             )
         )
 

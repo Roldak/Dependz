@@ -393,7 +393,7 @@ class DefTerm(DependzNode):
 
                     Or(ar.binder.is_null, oar.binder.is_null),
                     UnifyEquation.new(
-                        eq=LogicFalse(),
+                        eq=LogicTrue(),
                         renamings=No(Renaming.array)
                     ),
 

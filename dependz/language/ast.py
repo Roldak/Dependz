@@ -119,11 +119,10 @@ class DependzNode(ASTNode):
             lambda r: r.renamings
         ))
 
-        ignore(Var(If(
-            Try(unify_eq.solve, True),
-            True,
-            PropertyError(Bool, "Unification failed")
-        )))
+        res = Var(Try(
+            unify_eq.solve._or(PropertyError(Bool, "Unification failed")),
+            False
+        ))
 
         substs = Var(
             symbols.map(
@@ -155,10 +154,17 @@ class DependzNode(ASTNode):
                 )
             ))
         )
-        return If(
+        return Cond(
             incomplete,
             substs.concat(Self.unify_all(new_queries, left_symbols)),
-            substs
+
+            res,
+            substs,
+
+            PropertyError(
+                Substitution.array,
+                "Unification failed (not all metavariables could be bound)"
+            )
         )
 
 

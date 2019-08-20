@@ -19,7 +19,7 @@ MkPair : a -> b -> Pair a b
 test_pair : Pair Nat Nat
 test_pair = MkPair Z (S Z)
 
-DPair : a:t -> P : (a -> t) -> Type
+DPair : a:t -> P : (a -> q) -> Type
 DPMake : x:a -> P x -> DPair a P
 
 test_dpair : DPair Nat (\n. Vec Nat n)

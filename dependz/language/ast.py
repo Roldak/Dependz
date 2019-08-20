@@ -8,7 +8,7 @@ from langkit.envs import EnvSpec, add_env, add_to_env_kv, handle_children
 from langkit.expressions import (
     Self, Entity, langkit_property, Property, AbstractProperty, Not, No, If,
     ArrayLiteral, String, Var, AbstractKind, Let, Bind, LogicTrue, LogicFalse,
-    Or, And, PropertyError, ignore, Try, Cond
+    Or, And, PropertyError, ignore, Try, Cond, Predicate
 )
 
 
@@ -103,8 +103,7 @@ class DependzNode(ASTNode):
 
     @langkit_property(return_type=Substitution.array,
                       activate_tracing=GLOBAL_ACTIVATE_TRACING)
-    def unify_all(queries=UnifyQuery.array, symbols=T.Symbol.array,
-                  final=(Bool, False)):
+    def unify_all(queries=UnifyQuery.array, symbols=T.Symbol.array):
         vars = Var(Self.make_logic_var_array)
         query_results = Var(queries.map(
             lambda q: q.first.unify_equation(
@@ -114,14 +113,14 @@ class DependzNode(ASTNode):
             )
         ))
         unify_eq = Var(query_results.logic_all(
-            lambda r: If(final, r.eq, Or(r.eq, LogicTrue()))
+            lambda r: r.eq
         ))
         renamings = Var(query_results.mapcat(
             lambda r: r.renamings
         ))
 
         ignore(Var(If(
-            Try(unify_eq.solve, True) | Not(final),
+            Try(unify_eq.solve, True),
             True,
             PropertyError(Bool, "Unification failed")
         )))
@@ -156,14 +155,10 @@ class DependzNode(ASTNode):
                 )
             ))
         )
-        return Cond(
-            final,
-            substs,
-
+        return If(
             incomplete,
             substs.concat(Self.unify_all(new_queries, left_symbols)),
-
-            substs.concat(Self.unify_all(new_queries, left_symbols, True))
+            substs
         )
 
 
@@ -255,17 +250,55 @@ class DefTerm(DependzNode):
             )
         )
 
-    @langkit_property(return_type=UnifyEquation, uses_entity_info=False)
-    def first_order_unify_equation(other=T.DefTerm,
-                                   symbols=T.Symbol.array,
-                                   vars=LogicVarArray):
+    @langkit_property(return_type=T.Bool)
+    def unifies_with(other=T.DefTerm, symbols=T.Symbol.array):
+        return Try(
+            Let(lambda r=Self.unify(other, symbols): True),
+            False
+        )
 
-        def if_is_metavar(symbol, then, els):
-            return If(
-                symbols.contains(symbol),
-                then,
-                els
-            )
+    @langkit_property(return_type=UnifyEquation, uses_entity_info=False)
+    def first_order_flexible_flexible_equation(other=T.DefTerm,
+                                               vars=LogicVarArray):
+        self_var = Var(vars.elem(Self.cast(Identifier).sym))
+        other_var = Var(vars.elem(other.cast(Identifier).sym))
+        return UnifyEquation.new(
+            eq=Bind(self_var, other_var, eq_prop=DefTerm.equivalent_entities),
+            renamings=No(Renaming.array)
+        )
+
+    @langkit_property(return_type=UnifyEquation, uses_entity_info=False)
+    def first_order_flexible_semirigid_equation(other=T.DefTerm,
+                                                symbols=T.Symbol.array,
+                                                vars=LogicVarArray):
+        self_var = Var(vars.elem(Self.cast(Identifier).sym))
+
+        return UnifyEquation.new(
+            eq=And(
+                Predicate(DefTerm.unifies_with, self_var, other, symbols),
+                LogicTrue()  # Bind(vars_in_flexible_eq, Self, conv_prop=...)
+            ),
+            renamings=No(Renaming.array)
+        )
+
+    @langkit_property(return_type=UnifyEquation, uses_entity_info=False)
+    def first_order_flexible_rigid_equation(other=T.DefTerm,
+                                            vars=LogicVarArray):
+        self_var = Var(vars.elem(Self.cast(Identifier).sym))
+
+        return UnifyEquation.new(
+            eq=Bind(
+                self_var,
+                other.as_bare_entity,
+                eq_prop=DefTerm.equivalent_entities
+            ),
+            renamings=No(Renaming.array)
+        )
+
+    @langkit_property(return_type=UnifyEquation, uses_entity_info=False)
+    def first_order_rigid_rigid_equation(other=T.DefTerm,
+                                         symbols=T.Symbol.array,
+                                         vars=LogicVarArray):
 
         def to_logic(bool):
             return If(bool, LogicTrue(), LogicFalse())
@@ -291,51 +324,18 @@ class DefTerm(DependzNode):
             return other.cast(expected_type).then(
                 then,
                 default_val=UnifyEquation.new(
-                    eq=other.cast(Identifier).then(
-                        lambda oid: if_is_metavar(
-                            oid.sym,
-                            Bind(
-                                vars.elem(oid.sym), Self.as_bare_entity,
-                                eq_prop=DefTerm.equivalent_entities
-                            ),
-                            LogicFalse()
-                        ),
-                        default_val=LogicFalse()
-                    ),
+                    eq=LogicFalse(),
                     renamings=No(Renaming.array)
                 )
             )
 
         return Self.match(
-            lambda id=Identifier: UnifyEquation.new(
-                eq=if_is_metavar(
-                    id.sym,
-                    other.cast(Identifier).then(
-                        lambda oid: if_is_metavar(
-                            oid.sym,
-                            Bind(vars.elem(id.sym), vars.elem(oid.sym),
-                                 eq_prop=DefTerm.equivalent_entities),
-                            Bind(vars.elem(id.sym), other.as_bare_entity,
-                                 eq_prop=DefTerm.equivalent_entities)
-                        ),
-                        default_val=Bind(
-                            vars.elem(id.sym), other.as_bare_entity,
-                            eq_prop=DefTerm.equivalent_entities
-                        )
-                    ),
-                    other.cast(Identifier).then(
-                        lambda oid: if_is_metavar(
-                            oid.sym,
-                            Bind(
-                                vars.elem(oid.sym), Self.as_bare_entity,
-                                eq_prop=DefTerm.equivalent_entities
-                            ),
-                            to_logic(id.equivalent(other))
-                        ),
-                        default_val=LogicFalse()
-                    )
-                ),
-                renamings=No(Renaming.array)
+            lambda id=Identifier: unify_case(
+                Identifier,
+                lambda oid: UnifyEquation.new(
+                    eq=to_logic(id.sym == oid.sym),
+                    renamings=No(Renaming.array)
+                )
             ),
 
             lambda ab=Abstraction: unify_case(
@@ -398,6 +398,39 @@ class DefTerm(DependzNode):
                     )
                 )
             )
+        )
+
+    @langkit_property(return_type=UnifyEquation, uses_entity_info=False)
+    def first_order_unify_equation(other=T.DefTerm,
+                                   symbols=T.Symbol.array,
+                                   vars=LogicVarArray):
+
+        self_is_metavar = Var(Self.cast(Identifier).then(
+            lambda id: symbols.contains(id.sym)
+        ))
+        other_is_metavar = Var(other.cast(Identifier).then(
+            lambda id: symbols.contains(id.sym)
+        ))
+        self_has_metavar = Var(symbols.any(lambda s: Self.is_free(s)))
+        other_has_metavar = Var(symbols.any(lambda s: other.is_free(s)))
+
+        return Cond(
+            self_is_metavar & other_is_metavar,
+            Self.first_order_flexible_flexible_equation(other, vars),
+
+            self_is_metavar & other_has_metavar,
+            Self.first_order_flexible_semirigid_equation(other, symbols, vars),
+
+            other_is_metavar & self_has_metavar,
+            other.first_order_flexible_semirigid_equation(Self, symbols, vars),
+
+            self_is_metavar,
+            Self.first_order_flexible_rigid_equation(other, vars),
+
+            other_is_metavar,
+            other.first_order_flexible_rigid_equation(Self, vars),
+
+            Self.first_order_rigid_rigid_equation(other, symbols, vars)
         )
 
     @langkit_property(return_type=T.Equation)
@@ -512,8 +545,10 @@ class DefTerm(DependzNode):
     @langkit_property(return_type=T.DefTerm)
     def substitute_all(substs=Substitution.array, idx=(T.Int, 0)):
         return substs.at(idx).then(
-            lambda r:
-            Self.substituted_domain(r.from_symbol, r.to_term).substitute_all(
+            lambda r: Self.substituted_domain(
+                r.from_symbol,
+                r.to_term
+            ).substitute_all(
                 substs, idx + 1
             ),
             default_val=Self

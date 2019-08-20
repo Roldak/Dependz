@@ -8,7 +8,7 @@ Vec : Type -> Nat -> Type
 Nil : Vec t Z
 Cons : t -> Vec t n -> Vec t (S n)
 
-id : t -> t
+id : i:t -> t
 id = \x. x
 
 elim_nat : P Z -> (k:Nat -> P (S k)) -> x:Nat -> P x

@@ -439,7 +439,8 @@ class DefTerm(DependzNode):
             Self.first_order_rigid_rigid_equation(other, symbols, vars)
         )
 
-    @langkit_property(return_type=T.Equation)
+    @langkit_property(return_type=T.Equation,
+                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def higher_order_unification(arg=T.Term, res=T.Term, metavar=T.LogicVar):
         fresh_sym = Var(Self.fresh_symbol("ho"))
 
@@ -456,23 +457,14 @@ class DefTerm(DependzNode):
             metavar,
             Self.parent.make_abstraction(
                 Self.parent.make_ident(fresh_sym),
-                Self.parent.make_ident(fresh_sym)
+                res.anti_substitute(arg, fresh_sym)
             ).as_bare_entity,
             eq_prop=DefTerm.equivalent_entities
         ))
 
-        return If(
-            arg.equivalent(res),
-
-            Or(
-                imitate,
-                project
-            ),
-
-            Or(
-                imitate,
-                LogicTrue()
-            )
+        return Or(
+            imitate,
+            project
         )
 
     @langkit_property(return_type=UnifyEquation, uses_entity_info=False)
@@ -701,6 +693,26 @@ class Term(DefTerm):
                 )
             )
         )
+
+    @langkit_property(return_type=T.Term)
+    def anti_substitute(val=T.Term, sym=T.Symbol):
+        return If(
+            Self.equivalent(val),
+            Self.make_ident(sym),
+            Self.match(
+                lambda id=Identifier: id,
+                lambda ap=Apply: ap.parent.make_apply(
+                    ap.lhs.anti_substitute(val, sym),
+                    ap.rhs.anti_substitute(val, sym)
+                ),
+                lambda ab=Abstraction: ab.parent.make_abstraction(
+                    ab.ident.anti_substitute(val, sym)
+                    .cast_or_raise(Identifier),
+                    ab.term.anti_substitute(val, sym)
+                )
+            )
+        )
+
 
     @langkit_property(public=True, return_type=T.Term, memoized=False)
     def normalize():

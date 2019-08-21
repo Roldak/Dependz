@@ -112,15 +112,16 @@ class DependzNode(ASTNode):
                 vars
             )
         ))
-        unify_eq = Var(query_results.logic_all(
-            lambda r: r.eq
+        unify_eq = Var(Or(
+            query_results.logic_all(lambda r: r.eq),
+            LogicTrue()
         ))
         renamings = Var(query_results.mapcat(
             lambda r: r.renamings
         ))
 
         res = Var(Try(
-            unify_eq.solve._or(PropertyError(Bool, "Unification failed")),
+            unify_eq.solve._or(PropertyError(Bool, "Cannot happen")),
             False
         ))
 

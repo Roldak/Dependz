@@ -1,0 +1,46 @@
+Type : Type_1
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+Vec : Type -> Nat -> Type
+Nil : Vec t Z
+Cons : t -> Vec t n -> Vec t (S n)
+
+One : Nat
+One = S Z
+
+Two : Nat
+Two = S One
+
+T1 : Type
+T2 : Type
+
+T1 = Nat
+T2 = Vec Nat Z
+
+T1_Val_1 : T1
+T1_Val_2 : T1
+T2_Val_1 : T2
+
+T1_Val_1 = Z
+T1_Val_2 = (S Z)
+T2_Val_1 = Nil
+
+Nil_T1_Vec : Vec T1 Z
+Nil_T2_Vec : Vec T2 Z
+
+Nil_T1_Vec = Nil
+Nil_T2_Vec = Nil
+
+foo : P T1 -> P T2 -> Nat
+
+test_simple_imitate : Nat
+test_simple_imitate = foo T1_Val_1 T1_Val_2
+
+test_simple_project : Nat
+test_simple_project = foo T1_Val_1 T2_Val_1
+
+test_complex_project : Nat
+test_complex_project = foo Nil_T1_Vec Nil_T2_Vec
+

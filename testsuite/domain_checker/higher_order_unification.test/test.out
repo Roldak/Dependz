@@ -1,0 +1,18 @@
+test_simple_imitate: Success
+  <Apply test.dep:39:23-39:44>: Nat
+  <Apply test.dep:39:23-39:35>: (Nat -> Nat)
+  <SourceId test.dep:39:23-39:26>: (Nat -> (Nat -> Nat))
+  <SourceId test.dep:39:27-39:35>: Nat
+  <SourceId test.dep:39:36-39:44>: Nat
+test_simple_project: Success
+  <Apply test.dep:42:23-42:44>: Nat
+  <Apply test.dep:42:23-42:35>: (((Vec Nat) Z) -> Nat)
+  <SourceId test.dep:42:23-42:26>: (Nat -> (((Vec Nat) Z) -> Nat))
+  <SourceId test.dep:42:27-42:35>: Nat
+  <SourceId test.dep:42:36-42:44>: ((Vec Nat) Z)
+test_complex_project: Success
+  <Apply test.dep:45:24-45:49>: Nat
+  <Apply test.dep:45:24-45:38>: (((Vec ((Vec Nat) Z)) Z) -> Nat)
+  <SourceId test.dep:45:24-45:27>: (((Vec Nat) Z) -> (((Vec ((Vec Nat) Z)) Z) -> Nat))
+  <SourceId test.dep:45:28-45:38>: ((Vec Nat) Z)
+  <SourceId test.dep:45:39-45:49>: ((Vec ((Vec Nat) Z)) Z)

@@ -33,14 +33,17 @@ Nil_T2_Vec : Vec T2 Z
 Nil_T1_Vec = Nil
 Nil_T2_Vec = Nil
 
-foo : P T1 -> P T2 -> Nat
+Witness : x -> Type
+elim_w : Box x -> Type
 
-test_simple_imitate : Nat
-test_simple_imitate = foo T1_Val_1 T1_Val_2
+foo : P T1 -> P T2 -> Witness P
 
-test_simple_project : Nat
-test_simple_project = foo T1_Val_1 T2_Val_1
+test_simple_imitate : Type
+test_simple_imitate = elim_w (foo T1_Val_1 T1_Val_2)
 
-test_complex_project : Nat
-test_complex_project = foo Nil_T1_Vec Nil_T2_Vec
+test_simple_project : Type
+test_simple_project = elim_w (foo T1_Val_1 T2_Val_1)
+
+test_complex_project : Type
+test_complex_project = elim_w (foo Nil_T1_Vec Nil_T2_Vec)
 

@@ -1,18 +1,24 @@
 test_simple_imitate: Success
-  <Apply test.dep:39:23-39:44>: Nat
-  <Apply test.dep:39:23-39:35>: (Nat -> Nat)
-  <SourceId test.dep:39:23-39:26>: (Nat -> (Nat -> Nat))
-  <SourceId test.dep:39:27-39:35>: Nat
-  <SourceId test.dep:39:36-39:44>: Nat
+  <Apply test.dep:42:23-42:53>: Type
+  <SourceId test.dep:42:23-42:29>: ((Witness (\ho$3. Nat)) -> Type)
+  <Apply test.dep:42:31-42:52>: (Witness (\ho$3. Nat))
+  <Apply test.dep:42:31-42:43>: (Nat -> (Witness (\ho$3. Nat)))
+  <SourceId test.dep:42:31-42:34>: (Nat -> (Nat -> (Witness (\ho$3. Nat))))
+  <SourceId test.dep:42:35-42:43>: Nat
+  <SourceId test.dep:42:44-42:52>: Nat
 test_simple_project: Success
-  <Apply test.dep:42:23-42:44>: Nat
-  <Apply test.dep:42:23-42:35>: (((Vec Nat) Z) -> Nat)
-  <SourceId test.dep:42:23-42:26>: (Nat -> (((Vec Nat) Z) -> Nat))
-  <SourceId test.dep:42:27-42:35>: Nat
-  <SourceId test.dep:42:36-42:44>: ((Vec Nat) Z)
+  <Apply test.dep:45:23-45:53>: Type
+  <SourceId test.dep:45:23-45:29>: ((Witness (\ho$13. ho$13)) -> Type)
+  <Apply test.dep:45:31-45:52>: (Witness (\ho$13. ho$13))
+  <Apply test.dep:45:31-45:43>: (((Vec Nat) Z) -> (Witness (\ho$13. ho$13)))
+  <SourceId test.dep:45:31-45:34>: (Nat -> (((Vec Nat) Z) -> (Witness (\ho$13. ho$13))))
+  <SourceId test.dep:45:35-45:43>: Nat
+  <SourceId test.dep:45:44-45:52>: ((Vec Nat) Z)
 test_complex_project: Success
-  <Apply test.dep:45:24-45:49>: Nat
-  <Apply test.dep:45:24-45:38>: (((Vec ((Vec Nat) Z)) Z) -> Nat)
-  <SourceId test.dep:45:24-45:27>: (((Vec Nat) Z) -> (((Vec ((Vec Nat) Z)) Z) -> Nat))
-  <SourceId test.dep:45:28-45:38>: ((Vec Nat) Z)
-  <SourceId test.dep:45:39-45:49>: ((Vec ((Vec Nat) Z)) Z)
+  <Apply test.dep:48:24-48:58>: Type
+  <SourceId test.dep:48:24-48:30>: ((Witness (\ho$26. ((Vec ho$26) Z))) -> Type)
+  <Apply test.dep:48:32-48:57>: (Witness (\ho$26. ((Vec ho$26) Z)))
+  <Apply test.dep:48:32-48:46>: (((Vec ((Vec Nat) Z)) Z) -> (Witness (\ho$26. ((Vec ho$26) Z))))
+  <SourceId test.dep:48:32-48:35>: (((Vec Nat) Z) -> (((Vec ((Vec Nat) Z)) Z) -> (Witness (\ho$26. ((Vec ho$26) Z)))))
+  <SourceId test.dep:48:36-48:46>: ((Vec Nat) Z)
+  <SourceId test.dep:48:47-48:57>: ((Vec ((Vec Nat) Z)) Z)

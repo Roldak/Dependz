@@ -484,6 +484,18 @@ class DefTerm(DependzNode):
 
         return Self.substitute_all(substs).dnorm
 
+    @langkit_property(return_type=T.Bool,
+                      dynamic_vars=[unification_context,
+                                    ho_unification_context])
+    def higher_order_check_current_solution():
+        return Entity.parent.make_apply(
+            Self.cast_or_raise(Term),
+            ho_unification_context.arg.solve_time_substitution
+            .cast_or_raise(Term)
+        ).normalize.equivalent(
+            ho_unification_context.res.solve_time_substitution
+        )
+
     @langkit_property(return_type=T.DefTerm.entity,
                       dynamic_vars=[unification_context,
                                     ho_unification_context])
@@ -544,10 +556,19 @@ class DefTerm(DependzNode):
             )
         ))
 
+        ignore = Var(ho_unification_context.bind(
+            ho_ctx,
+            Predicate(
+                DefTerm.higher_order_check_current_solution,
+                metavar
+            )
+        ))
+
         return UnifyEquation.new(
             eq=Or(
                 imitate,
-                project
+                project,
+                ignore
             ),
             renamings=No(Renaming.array)
         )

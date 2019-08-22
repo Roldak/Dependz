@@ -9,7 +9,7 @@ from langkit.expressions import (
     Self, Entity, langkit_property, Property, AbstractProperty, Not, No, If,
     ArrayLiteral, String, Var, AbstractKind, Let, Bind, LogicTrue, LogicFalse,
     Or, And, PropertyError, ignore, Try, Cond, Predicate, DynamicVariable,
-    bind
+    bind, CharacterLiteral
 )
 
 
@@ -1120,9 +1120,34 @@ class Abstraction(Term):
     ident = Field(type=Identifier)
     term = Field(type=Term)
 
-    to_string = Property(String("(\\").concat(
-        Self.ident.to_string.concat(String('. ')).concat(Self.term.to_string)
-    ).concat(String(")")))
+    @langkit_property()
+    def to_string():
+        actual_self = Var(If(
+            Self.is_synthesized,
+            Self.first_available_standard_symbol.then(
+                lambda s: Self.parent.make_abstraction(
+                    Self.make_ident(s),
+                    Self.term.rename(Self.ident.sym, s)
+                ),
+                default_val=Self
+            ),
+            Self,
+        ))
+        return String("(\\").concat(
+            actual_self.ident.to_string.concat(String('. ')).concat(
+                actual_self.term.to_string
+            )
+        ).concat(String(")"))
+
+    @langkit_property(return_type=Bool)
+    def is_synthesized():
+        return Self.ident.to_string.contains(CharacterLiteral("$"))
+
+    @langkit_property(return_type=Symbol)
+    def first_available_standard_symbol():
+        return ArrayLiteral(["x", "y", "z", "e"], element_type=T.Symbol).find(
+            lambda s: Not(Self.term.is_free(s))
+        )
 
 
 @synthetic

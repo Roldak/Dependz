@@ -512,11 +512,11 @@ class DefTerm(DependzNode):
             )
         ).as_bare_entity
 
-    @langkit_property(return_type=T.Equation,
+    @langkit_property(return_type=T.UnifyEquation,
                       activate_tracing=GLOBAL_ACTIVATE_TRACING,
                       dynamic_vars=[unification_context])
-    def higher_order_unification(arg=T.Term, res=T.Term,
-                                 ho_sym=T.Symbol):
+    def higher_order_single_arg_equation(arg=T.Term, res=T.Term,
+                                         ho_sym=T.Symbol):
         metavar = Var(unification_context.vars.elem(ho_sym))
 
         ho_ctx = Var(HigherOrderUnificationContext.new(
@@ -544,9 +544,33 @@ class DefTerm(DependzNode):
             )
         ))
 
-        return Or(
-            imitate,
-            project
+        return UnifyEquation.new(
+            eq=Or(
+                imitate,
+                project
+            ),
+            renamings=No(Renaming.array)
+        )
+
+    @langkit_property(return_type=T.UnifyEquation,
+                      dynamic_vars=[unification_context])
+    def higher_order_unify_equation(other=T.DefTerm, ho_term=T.Identifier):
+        is_single_arg_equation = Var(And(
+            Self.cast(Apply).lhs == ho_term,
+            other.is_a(Term)
+        ))
+        return Cond(
+            is_single_arg_equation,
+            Self.higher_order_single_arg_equation(
+                Self.cast(Apply).rhs,
+                other.cast_or_raise(Term),
+                ho_term.sym
+            ),
+
+            UnifyEquation.new(
+                eq=LogicTrue(),
+                renamings=No(Renaming.array)
+            )
         )
 
     @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
@@ -557,6 +581,9 @@ class DefTerm(DependzNode):
         def outermost_metavar_application_of(term):
             return term.cast(Apply)._.left_most_term.cast(Identifier).then(
                 lambda id: If(
+                    # Check the id is indeed a metavariable, and that it's the
+                    # first time we discover this higher order application.
+                    # (if it's not, it means term.parent must not be an Apply).
                     And(symbols.contains(id.sym),
                         Not(term.parent.cast(Apply)._.lhs == term)),
                     id,
@@ -567,51 +594,20 @@ class DefTerm(DependzNode):
         self_hoa = Var(outermost_metavar_application_of(Self))
         other_hoa = Var(outermost_metavar_application_of(other))
 
-        first_order_res = Var(
-            Self.first_order_unify_equation(other)
+        unify_eqs = Var(
+            Self.first_order_unify_equation(other).singleton
+            .concat(self_hoa.then(
+                lambda id:
+                Self.higher_order_unify_equation(other, id).singleton
+            )).concat(other_hoa.then(
+                lambda id:
+                other.higher_order_unify_equation(Self, id).singleton
+            ))
         )
 
-        return Cond(
-            And(Not(self_hoa.is_null),
-                Self.cast(Apply).lhs == self_hoa,
-                other.is_a(Term)),
-            UnifyEquation.new(
-                eq=Or(
-                    first_order_res.eq,
-                    Self.higher_order_unification(
-                        Self.cast(Apply).rhs,
-                        other.cast_or_raise(Term),
-                        self_hoa.sym
-                    )
-                ),
-                renamings=first_order_res.renamings
-            ),
-
-            And(Not(other_hoa.is_null),
-                other.cast(Apply).lhs == other_hoa,
-                Self.is_a(Term)),
-            UnifyEquation.new(
-                eq=Or(
-                    first_order_res.eq,
-                    other.higher_order_unification(
-                        other.cast(Apply).rhs,
-                        Self.cast_or_raise(Term),
-                        other_hoa.sym
-                    )
-                ),
-                renamings=first_order_res.renamings
-            ),
-
-            Or(Not(self_hoa.is_null), Not(other_hoa.is_null)),
-            UnifyEquation.new(
-                eq=Or(
-                    first_order_res.eq,
-                    LogicTrue()
-                ),
-                renamings=first_order_res.renamings
-            ),
-
-            first_order_res
+        return UnifyEquation.new(
+            eq=unify_eqs.logic_any(lambda eq: eq.eq),
+            renamings=unify_eqs.mapcat(lambda eq: eq.renamings)
         )
 
     @langkit_property(return_type=T.DefTerm)

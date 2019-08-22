@@ -8,7 +8,8 @@ from langkit.envs import EnvSpec, add_env, add_to_env_kv, handle_children
 from langkit.expressions import (
     Self, Entity, langkit_property, Property, AbstractProperty, Not, No, If,
     ArrayLiteral, String, Var, AbstractKind, Let, Bind, LogicTrue, LogicFalse,
-    Or, And, PropertyError, ignore, Try, Cond, Predicate
+    Or, And, PropertyError, ignore, Try, Cond, Predicate, DynamicVariable,
+    bind
 )
 
 
@@ -54,6 +55,25 @@ class UnifyQuery(Struct):
 class TypingsDescription(Struct):
     bindings = UserField(type=T.Binding.array)
     equations = UserField(type=T.UnifyQuery.array)
+
+
+class UnificationContext(Struct):
+    symbols = UserField(type=T.Symbol.array)
+    vars = UserField(type=T.LogicVarArray)
+
+
+class HigherOrderUnificationContext(Struct):
+    arg = UserField(type=T.Term)
+    res = UserField(type=T.Term)
+
+
+unification_context = DynamicVariable(
+    "unification_context", type=UnificationContext
+)
+
+ho_unification_context = DynamicVariable(
+    "ho_unification_context", type=HigherOrderUnificationContext
+)
 
 
 @abstract
@@ -440,27 +460,93 @@ class DefTerm(DependzNode):
             Self.first_order_rigid_rigid_equation(other, symbols, vars)
         )
 
-    @langkit_property(return_type=T.Equation,
-                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
-    def higher_order_unification(arg=T.Term, res=T.Term, metavar=T.LogicVar):
-        fresh_sym = Var(Self.fresh_symbol("ho"))
+    @langkit_property(return_type=T.DefTerm,
+                      dynamic_vars=[unification_context])
+    def solve_time_substitution():
+        symbols = Var(unification_context.symbols)
+        vars = Var(unification_context.vars)
 
-        imitate = Var(Bind(
-            metavar,
-            Self.parent.make_abstraction(
-                Self.parent.make_ident(fresh_sym),
-                res
-            ).as_bare_entity,
-            eq_prop=DefTerm.equivalent_entities
+        substs = Var(symbols.map(
+            lambda s: Substitution.new(
+                from_symbol=s,
+                to_term=vars.elem(s).get_value._.cast_or_raise(DefTerm).node
+            )
+        ).filter(
+            lambda s: Not(s.to_term.is_null)
         ))
 
-        project = Var(Bind(
-            metavar,
-            Self.parent.make_abstraction(
-                Self.parent.make_ident(fresh_sym),
-                res.anti_substitute(arg, fresh_sym)
-            ).as_bare_entity,
-            eq_prop=DefTerm.equivalent_entities
+        return Self.substitute_all(substs).dnorm
+
+    @langkit_property(return_type=T.DefTerm.entity,
+                      dynamic_vars=[unification_context,
+                                    ho_unification_context])
+    def higher_order_construct_imitation():
+        fresh_sym = Var(Self.fresh_symbol("ho"))
+        res = Var(ho_unification_context.res)
+
+        return Entity.parent.make_abstraction(
+            Self.parent.make_ident(fresh_sym),
+            res.solve_time_substitution.cast_or_raise(Term)
+        ).as_bare_entity
+
+    @langkit_property(return_type=T.DefTerm.entity,
+                      dynamic_vars=[unification_context,
+                                    ho_unification_context])
+    def higher_order_construct_projection():
+        fresh_sym = Var(Self.fresh_symbol("ho"))
+        arg = Var(ho_unification_context.arg)
+        res = Var(ho_unification_context.res)
+
+        return Entity.parent.make_abstraction(
+            Self.parent.make_ident(fresh_sym),
+            res.solve_time_substitution.cast_or_raise(Term).anti_substitute(
+                arg.solve_time_substitution.cast_or_raise(Term),
+                fresh_sym
+            )
+        ).as_bare_entity
+
+    @langkit_property(return_type=T.Equation,
+                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
+    def higher_order_unification(arg=T.Term, res=T.Term,
+                                 symbols=T.Symbol.array,
+                                 vars=T.LogicVarArray,
+                                 ho_sym=T.Symbol):
+        metavar = Var(vars.elem(ho_sym))
+
+        ctx = Var(UnificationContext.new(
+            symbols=symbols,
+            vars=vars
+        ))
+
+        ho_ctx = Var(HigherOrderUnificationContext.new(
+            arg=arg,
+            res=res
+        ))
+
+        imitate = Var(unification_context.bind(
+            ctx,
+            ho_unification_context.bind(
+                ho_ctx,
+                Bind(
+                    metavar,
+                    Self.as_bare_entity,
+                    eq_prop=DefTerm.equivalent_entities,
+                    conv_prop=DefTerm.higher_order_construct_imitation
+                )
+            )
+        ))
+
+        project = Var(unification_context.bind(
+            ctx,
+            ho_unification_context.bind(
+                ho_ctx,
+                Bind(
+                    metavar,
+                    Self.as_bare_entity,
+                    eq_prop=DefTerm.equivalent_entities,
+                    conv_prop=DefTerm.higher_order_construct_projection
+                )
+            )
         ))
 
         return Or(
@@ -500,7 +586,9 @@ class DefTerm(DependzNode):
                     Self.higher_order_unification(
                         Self.cast(Apply).rhs,
                         other.cast_or_raise(Term),
-                        vars.elem(self_hoa.sym)
+                        symbols,
+                        vars,
+                        self_hoa.sym
                     )
                 ),
                 renamings=first_order_res.renamings
@@ -515,7 +603,9 @@ class DefTerm(DependzNode):
                     other.higher_order_unification(
                         other.cast(Apply).rhs,
                         Self.cast_or_raise(Term),
-                        vars.elem(other_hoa.sym)
+                        symbols,
+                        vars,
+                        other_hoa.sym
                     )
                 ),
                 renamings=first_order_res.renamings

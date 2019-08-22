@@ -1,24 +1,60 @@
 test_simple_imitate: Success
   <Apply test.dep:42:23-42:53>: Type
-  <SourceId test.dep:42:23-42:29>: ((Witness (\ho$3. Nat)) -> Type)
-  <Apply test.dep:42:31-42:52>: (Witness (\ho$3. Nat))
-  <Apply test.dep:42:31-42:43>: (Nat -> (Witness (\ho$3. Nat)))
-  <SourceId test.dep:42:31-42:34>: (Nat -> (Nat -> (Witness (\ho$3. Nat))))
+  <SourceId test.dep:42:23-42:29>: ((Witness (\ho$2. Nat)) -> Type)
+  <Apply test.dep:42:31-42:52>: (Witness (\ho$2. Nat))
+  <Apply test.dep:42:31-42:43>: (Nat -> (Witness (\ho$2. Nat)))
+  <SourceId test.dep:42:31-42:34>: (Nat -> (Nat -> (Witness (\ho$2. Nat))))
   <SourceId test.dep:42:35-42:43>: Nat
   <SourceId test.dep:42:44-42:52>: Nat
 test_simple_project: Success
   <Apply test.dep:45:23-45:53>: Type
-  <SourceId test.dep:45:23-45:29>: ((Witness (\ho$13. ho$13)) -> Type)
-  <Apply test.dep:45:31-45:52>: (Witness (\ho$13. ho$13))
-  <Apply test.dep:45:31-45:43>: (((Vec Nat) Z) -> (Witness (\ho$13. ho$13)))
-  <SourceId test.dep:45:31-45:34>: (Nat -> (((Vec Nat) Z) -> (Witness (\ho$13. ho$13))))
+  <SourceId test.dep:45:23-45:29>: ((Witness (\ho$15. ho$15)) -> Type)
+  <Apply test.dep:45:31-45:52>: (Witness (\ho$15. ho$15))
+  <Apply test.dep:45:31-45:43>: (((Vec Nat) Z) -> (Witness (\ho$15. ho$15)))
+  <SourceId test.dep:45:31-45:34>: (Nat -> (((Vec Nat) Z) -> (Witness (\ho$15. ho$15))))
   <SourceId test.dep:45:35-45:43>: Nat
   <SourceId test.dep:45:44-45:52>: ((Vec Nat) Z)
 test_complex_project: Success
   <Apply test.dep:48:24-48:58>: Type
-  <SourceId test.dep:48:24-48:30>: ((Witness (\ho$26. ((Vec ho$26) Z))) -> Type)
-  <Apply test.dep:48:32-48:57>: (Witness (\ho$26. ((Vec ho$26) Z)))
-  <Apply test.dep:48:32-48:46>: (((Vec ((Vec Nat) Z)) Z) -> (Witness (\ho$26. ((Vec ho$26) Z))))
-  <SourceId test.dep:48:32-48:35>: (((Vec Nat) Z) -> (((Vec ((Vec Nat) Z)) Z) -> (Witness (\ho$26. ((Vec ho$26) Z)))))
+  <SourceId test.dep:48:24-48:30>: ((Witness (\ho$30. ((Vec ho$30) Z))) -> Type)
+  <Apply test.dep:48:32-48:57>: (Witness (\ho$30. ((Vec ho$30) Z)))
+  <Apply test.dep:48:32-48:46>: (((Vec ((Vec Nat) Z)) Z) -> (Witness (\ho$30. ((Vec ho$30) Z))))
+  <SourceId test.dep:48:32-48:35>: (((Vec Nat) Z) -> (((Vec ((Vec Nat) Z)) Z) -> (Witness (\ho$30. ((Vec ho$30) Z)))))
   <SourceId test.dep:48:36-48:46>: ((Vec Nat) Z)
   <SourceId test.dep:48:47-48:57>: ((Vec ((Vec Nat) Z)) Z)
+test_complex_imitate: Success
+  <Apply test.dep:53:24-53:72>: Type
+  <SourceId test.dep:53:24-53:30>: ((Witness (\ho$42. Nat)) -> Type)
+  <Apply test.dep:53:32-53:71>: (Witness (\ho$42. Nat))
+  <Apply test.dep:53:32-53:62>: (Nat -> (Witness (\ho$42. Nat)))
+  <Apply test.dep:53:32-53:53>: (Nat -> (Nat -> (Witness (\ho$42. Nat))))
+  <Apply test.dep:53:32-53:44>: (Nat -> (Nat -> (Nat -> (Witness (\ho$42. Nat)))))
+  <SourceId test.dep:53:32-53:35>: (Nat -> (Nat -> (Nat -> (Nat -> (Witness (\ho$42. Nat))))))
+  <SourceId test.dep:53:36-53:44>: Nat
+  <SourceId test.dep:53:45-53:53>: Nat
+  <SourceId test.dep:53:54-53:62>: Nat
+  <SourceId test.dep:53:63-53:71>: Nat
+test_complex_project_2: Success
+  <Apply test.dep:56:26-56:74>: Type
+  <SourceId test.dep:56:26-56:32>: ((Witness (\ho$59. ho$59)) -> Type)
+  <Apply test.dep:56:34-56:73>: (Witness (\ho$59. ho$59))
+  <Apply test.dep:56:34-56:64>: (((Vec Nat) Z) -> (Witness (\ho$59. ho$59)))
+  <Apply test.dep:56:34-56:55>: (Nat -> (((Vec Nat) Z) -> (Witness (\ho$59. ho$59))))
+  <Apply test.dep:56:34-56:46>: (((Vec Nat) Z) -> (Nat -> (((Vec Nat) Z) -> (Witness (\ho$59. ho$59)))))
+  <SourceId test.dep:56:34-56:37>: (Nat -> (((Vec Nat) Z) -> (Nat -> (((Vec Nat) Z) -> (Witness (\ho$59. ho$59))))))
+  <SourceId test.dep:56:38-56:46>: Nat
+  <SourceId test.dep:56:47-56:55>: ((Vec Nat) Z)
+  <SourceId test.dep:56:56-56:64>: Nat
+  <SourceId test.dep:56:65-56:73>: ((Vec Nat) Z)
+test_complex_project_3: Success
+  <Apply test.dep:59:26-59:78>: Type
+  <SourceId test.dep:59:26-59:32>: ((Witness (\ho$78. ((Vec ho$78) Z))) -> Type)
+  <Apply test.dep:59:34-59:77>: (Witness (\ho$78. ((Vec ho$78) Z)))
+  <Apply test.dep:59:34-59:66>: (((Vec ((Vec Nat) Z)) Z) -> (Witness (\ho$78. ((Vec ho$78) Z))))
+  <Apply test.dep:59:34-59:55>: (((Vec Nat) Z) -> (((Vec ((Vec Nat) Z)) Z) -> (Witness (\ho$78. ((Vec ho$78) Z)))))
+  <Apply test.dep:59:34-59:46>: (((Vec Nat) Z) -> (((Vec Nat) Z) -> (((Vec ((Vec Nat) Z)) Z) -> (Witness (\ho$78. ((Vec ho$78) Z))))))
+  <SourceId test.dep:59:34-59:37>: (Nat -> (((Vec Nat) Z) -> (((Vec Nat) Z) -> (((Vec ((Vec Nat) Z)) Z) -> (Witness (\ho$78. ((Vec ho$78) Z)))))))
+  <SourceId test.dep:59:38-59:46>: Nat
+  <SourceId test.dep:59:47-59:55>: ((Vec Nat) Z)
+  <SourceId test.dep:59:56-59:66>: ((Vec Nat) Z)
+  <SourceId test.dep:59:67-59:77>: ((Vec ((Vec Nat) Z)) Z)

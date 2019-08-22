@@ -126,10 +126,12 @@ class DependzNode(ASTNode):
     def unify_all(queries=UnifyQuery.array, symbols=T.Symbol.array):
         vars = Var(Self.make_logic_var_array)
         query_results = Var(queries.map(
-            lambda q: q.first.unify_equation(
-                q.second,
-                symbols,
-                vars
+            lambda q: unification_context.bind(
+                UnificationContext.new(
+                    symbols=symbols,
+                    vars=vars
+                ),
+                q.first.unify_equation(q.second)
             )
         ))
         unify_eq = Var(Or(
@@ -277,41 +279,47 @@ class DefTerm(DependzNode):
             )
         )
 
-    @langkit_property(return_type=T.Bool)
-    def unifies_with(other=T.DefTerm, symbols=T.Symbol.array):
+    @langkit_property(return_type=T.Bool,
+                      dynamic_vars=[unification_context])
+    def unifies_with(other=T.DefTerm):
         return Try(
-            Let(lambda r=Self.unify(other, symbols): True),
+            Let(lambda r=Self.unify(other, unification_context.symbols): True),
             False
         )
 
-    @langkit_property(return_type=UnifyEquation, uses_entity_info=False)
-    def first_order_flexible_flexible_equation(other=T.DefTerm,
-                                               vars=LogicVarArray):
+    @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
+                      dynamic_vars=[unification_context])
+    def first_order_flexible_flexible_equation(other=T.DefTerm):
+        vars = Var(unification_context.vars)
         self_var = Var(vars.elem(Self.cast(Identifier).sym))
         other_var = Var(vars.elem(other.cast(Identifier).sym))
+
         return UnifyEquation.new(
             eq=Bind(self_var, other_var, eq_prop=DefTerm.equivalent_entities),
             renamings=No(Renaming.array)
         )
 
-    @langkit_property(return_type=UnifyEquation, uses_entity_info=False)
-    def first_order_flexible_semirigid_equation(other=T.DefTerm,
-                                                symbols=T.Symbol.array,
-                                                vars=LogicVarArray):
-        self_var = Var(vars.elem(Self.cast(Identifier).sym))
+    @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
+                      dynamic_vars=[unification_context])
+    def first_order_flexible_semirigid_equation(other=T.DefTerm):
+        self_var = Var(
+            unification_context.vars.elem(Self.cast(Identifier).sym)
+        )
 
         return UnifyEquation.new(
             eq=And(
-                Predicate(DefTerm.unifies_with, self_var, other, symbols),
+                Predicate(DefTerm.unifies_with, self_var, other),
                 LogicTrue()  # Bind(vars_in_flexible_eq, Self, conv_prop=...)
             ),
             renamings=No(Renaming.array)
         )
 
-    @langkit_property(return_type=UnifyEquation, uses_entity_info=False)
-    def first_order_flexible_rigid_equation(other=T.DefTerm,
-                                            vars=LogicVarArray):
-        self_var = Var(vars.elem(Self.cast(Identifier).sym))
+    @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
+                      dynamic_vars=[unification_context])
+    def first_order_flexible_rigid_equation(other=T.DefTerm):
+        self_var = Var(
+            unification_context.vars.elem(Self.cast(Identifier).sym)
+        )
 
         return UnifyEquation.new(
             eq=Bind(
@@ -322,10 +330,9 @@ class DefTerm(DependzNode):
             renamings=No(Renaming.array)
         )
 
-    @langkit_property(return_type=UnifyEquation, uses_entity_info=False)
-    def first_order_rigid_rigid_equation(other=T.DefTerm,
-                                         symbols=T.Symbol.array,
-                                         vars=LogicVarArray):
+    @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
+                      dynamic_vars=[unification_context])
+    def first_order_rigid_rigid_equation(other=T.DefTerm):
 
         def to_logic(bool):
             return If(bool, LogicTrue(), LogicFalse())
@@ -334,11 +341,11 @@ class DefTerm(DependzNode):
             assert (len(others) % 2 == 0)
 
             if len(others) == 0:
-                return x.unify_equation(y, symbols, vars)
+                return x.unify_equation(y)
             else:
                 return Let(
                     lambda
-                    e1=x.unify_equation(y, symbols, vars),
+                    e1=x.unify_equation(y),
                     e2=combine(*others):
 
                     UnifyEquation.new(
@@ -374,7 +381,7 @@ class DefTerm(DependzNode):
                         rob=o.term.rename(o.ident.sym, sym):
 
                         Let(
-                            lambda r=rab.unify_equation(rob, symbols, vars):
+                            lambda r=rab.unify_equation(rob):
                             UnifyEquation.new(
                                 eq=r.eq,
                                 renamings=r.renamings.concat(Renaming.new(
@@ -427,10 +434,10 @@ class DefTerm(DependzNode):
             )
         )
 
-    @langkit_property(return_type=UnifyEquation, uses_entity_info=False)
-    def first_order_unify_equation(other=T.DefTerm,
-                                   symbols=T.Symbol.array,
-                                   vars=LogicVarArray):
+    @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
+                      dynamic_vars=[unification_context])
+    def first_order_unify_equation(other=T.DefTerm):
+        symbols = Var(unification_context.symbols)
 
         self_is_metavar = Var(Self.cast(Identifier).then(
             lambda id: symbols.contains(id.sym)
@@ -443,21 +450,21 @@ class DefTerm(DependzNode):
 
         return Cond(
             self_is_metavar & other_is_metavar,
-            Self.first_order_flexible_flexible_equation(other, vars),
+            Self.first_order_flexible_flexible_equation(other),
 
             self_is_metavar & other_has_metavar,
-            Self.first_order_flexible_semirigid_equation(other, symbols, vars),
+            Self.first_order_flexible_semirigid_equation(other),
 
             other_is_metavar & self_has_metavar,
-            other.first_order_flexible_semirigid_equation(Self, symbols, vars),
+            other.first_order_flexible_semirigid_equation(Self),
 
             self_is_metavar,
-            Self.first_order_flexible_rigid_equation(other, vars),
+            Self.first_order_flexible_rigid_equation(other),
 
             other_is_metavar,
-            other.first_order_flexible_rigid_equation(Self, vars),
+            other.first_order_flexible_rigid_equation(Self),
 
-            Self.first_order_rigid_rigid_equation(other, symbols, vars)
+            Self.first_order_rigid_rigid_equation(other)
         )
 
     @langkit_property(return_type=T.DefTerm,
@@ -506,46 +513,34 @@ class DefTerm(DependzNode):
         ).as_bare_entity
 
     @langkit_property(return_type=T.Equation,
-                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
+                      activate_tracing=GLOBAL_ACTIVATE_TRACING,
+                      dynamic_vars=[unification_context])
     def higher_order_unification(arg=T.Term, res=T.Term,
-                                 symbols=T.Symbol.array,
-                                 vars=T.LogicVarArray,
                                  ho_sym=T.Symbol):
-        metavar = Var(vars.elem(ho_sym))
-
-        ctx = Var(UnificationContext.new(
-            symbols=symbols,
-            vars=vars
-        ))
+        metavar = Var(unification_context.vars.elem(ho_sym))
 
         ho_ctx = Var(HigherOrderUnificationContext.new(
             arg=arg,
             res=res
         ))
 
-        imitate = Var(unification_context.bind(
-            ctx,
-            ho_unification_context.bind(
-                ho_ctx,
-                Bind(
-                    metavar,
-                    Self.as_bare_entity,
-                    eq_prop=DefTerm.equivalent_entities,
-                    conv_prop=DefTerm.higher_order_construct_imitation
-                )
+        imitate = Var(ho_unification_context.bind(
+            ho_ctx,
+            Bind(
+                metavar,
+                Self.as_bare_entity,
+                eq_prop=DefTerm.equivalent_entities,
+                conv_prop=DefTerm.higher_order_construct_imitation
             )
         ))
 
-        project = Var(unification_context.bind(
-            ctx,
-            ho_unification_context.bind(
-                ho_ctx,
-                Bind(
-                    metavar,
-                    Self.as_bare_entity,
-                    eq_prop=DefTerm.equivalent_entities,
-                    conv_prop=DefTerm.higher_order_construct_projection
-                )
+        project = Var(ho_unification_context.bind(
+            ho_ctx,
+            Bind(
+                metavar,
+                Self.as_bare_entity,
+                eq_prop=DefTerm.equivalent_entities,
+                conv_prop=DefTerm.higher_order_construct_projection
             )
         ))
 
@@ -554,10 +549,10 @@ class DefTerm(DependzNode):
             project
         )
 
-    @langkit_property(return_type=UnifyEquation, uses_entity_info=False)
-    def unify_equation(other=T.DefTerm,
-                       symbols=T.Symbol.array,
-                       vars=LogicVarArray):
+    @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
+                      dynamic_vars=[unification_context])
+    def unify_equation(other=T.DefTerm):
+        symbols = Var(unification_context.symbols)
 
         def outermost_metavar_application_of(term):
             return term.cast(Apply)._.left_most_term.cast(Identifier).then(
@@ -573,7 +568,7 @@ class DefTerm(DependzNode):
         other_hoa = Var(outermost_metavar_application_of(other))
 
         first_order_res = Var(
-            Self.first_order_unify_equation(other, symbols, vars)
+            Self.first_order_unify_equation(other)
         )
 
         return Cond(
@@ -586,8 +581,6 @@ class DefTerm(DependzNode):
                     Self.higher_order_unification(
                         Self.cast(Apply).rhs,
                         other.cast_or_raise(Term),
-                        symbols,
-                        vars,
                         self_hoa.sym
                     )
                 ),
@@ -603,8 +596,6 @@ class DefTerm(DependzNode):
                     other.higher_order_unification(
                         other.cast(Apply).rhs,
                         Self.cast_or_raise(Term),
-                        symbols,
-                        vars,
                         other_hoa.sym
                     )
                 ),

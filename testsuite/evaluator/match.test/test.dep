@@ -1,0 +1,36 @@
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+One : Nat
+One = S Z
+
+Two : Nat
+Two = S One
+
+pred : Nat -> Nat
+pred = match (case S (\x. x) (case Z Z))
+
+test_pred_two : Nat
+test_pred_two = pred Two
+
+add : Nat -> Nat -> Nat
+add = match (case S (\x.\y. add x (S y)) (case Z (\y. y)))
+
+test_add_two_two : Nat
+test_add_two_two = add Two Two
+
+Pair : Type
+mk_pair : Nat -> Nat -> Pair
+fst : Pair -> Nat
+snd : Pair -> Nat
+
+fst = match (case mk_pair (\a.\b. a))
+snd = match (case mk_pair (\a.\b. b))
+
+my_pair : Pair
+my_pair = mk_pair One Two
+
+test_pair : Pair
+test_pair = mk_pair (snd my_pair) (fst my_pair)
+

@@ -716,6 +716,57 @@ class DefTerm(DependzNode):
 
 @abstract
 class Term(DefTerm):
+    @langkit_property(return_type=T.Term)
+    def eval_case(matches=T.Term, then_case=T.Term, else_case=T.Term):
+        constr = Var(matches.cast_or_raise(Identifier))
+        return Cond(
+            Self.cast(Identifier)._.sym == constr.sym,
+            then_case.eval,
+
+            Self.cast(Apply)._.left_most_term.cast(Identifier)
+            ._.sym == constr.sym,
+            Self.cast(Apply).replace_left_most_term_with(then_case).eval,
+
+            else_case._.extract_case_and_eval(Self)
+        )
+
+    @langkit_property(return_type=T.Term)
+    def extract_case_and_eval(arg=T.Term):
+        case_expr = Var(Self.cast_or_raise(Apply))
+        case_id = Var(case_expr.left_most_term.cast(Identifier))
+        case_lhs = Var(case_expr.lhs.cast_or_raise(Apply))
+        has_else = Var(case_lhs.lhs != case_id)
+        return If(
+            case_id._.sym == "case",
+            If(
+                has_else,
+                arg.eval_case(
+                    case_lhs.lhs.cast_or_raise(Apply).rhs,
+                    case_lhs.rhs,
+                    case_expr.rhs
+                ),
+                arg.eval_case(
+                    case_lhs.rhs,
+                    case_expr.rhs,
+                    No(T.Term)
+                )
+            ),
+            PropertyError(T.Term, "expected `case`")
+        )
+
+    @langkit_property(return_type=T.Term)
+    def eval_match():
+        elim_call = Var(Self.cast_or_raise(Apply))
+        elim_evaled = Var(elim_call.lhs.eval.cast(Apply))
+        elim_id = Var(elim_evaled._.left_most_term)
+        return If(
+            elim_id.cast(Identifier)._.sym == "match",
+            elim_evaled.rhs.extract_case_and_eval(
+                elim_call.rhs.eval
+            )._or(Self),
+            Self
+        )
+
     @langkit_property(public=True, return_type=T.Term, memoized=False)
     def eval():
         return Self.match(
@@ -725,7 +776,7 @@ class Term(DefTerm):
             ),
             lambda ap=Apply: ap.lhs.eval.cast(Abstraction).then(
                 lambda ab: ab.term.substitute(ab.ident.sym, ap.rhs).eval,
-                default_val=ap
+                default_val=ap.eval_match
             ),
             lambda ab=Abstraction: ab.term.cast(Apply).then(
                 lambda ap: If(
@@ -790,7 +841,6 @@ class Term(DefTerm):
                 )
             )
         )
-
 
     @langkit_property(public=True, return_type=T.Term, memoized=False)
     def normalize():
@@ -1108,6 +1158,16 @@ class Apply(Term):
         return Self.lhs.cast(Apply).then(
             lambda ap: ap.left_most_term,
             default_val=Self.lhs
+        )
+
+    @langkit_property(return_type=Term)
+    def replace_left_most_term_with(other=Term):
+        return Self.parent.make_apply(
+            Self.lhs.cast(Apply).then(
+                lambda ap: ap.replace_left_most_term_with(other),
+                default_val=other
+            ),
+            Self.rhs
         )
 
 

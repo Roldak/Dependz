@@ -452,9 +452,9 @@ class DefTerm(DependzNode):
                     ),
 
                     combine(
+                        ar.binder, oar.binder,
                         ar.lhs, oar.lhs,
-                        ar.rhs, oar.rhs,
-                        ar.binder, oar.binder
+                        ar.rhs, oar.rhs
                     )
                 )
             )

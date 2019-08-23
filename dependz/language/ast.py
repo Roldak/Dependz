@@ -302,14 +302,15 @@ class DefTerm(DependzNode):
     def unifies_with(other=T.DefTerm):
         current_self = Var(Self.solve_time_substitution.dnorm)
         current_other = Var(other.solve_time_substitution.dnorm)
-        return Try(
-            Let(
-                lambda r=current_self.unify(
-                    current_other,
-                    unification_context.symbols
-                ): True
+        substs = Var(Try(
+            current_self.unify(
+                current_other,
+                unification_context.symbols
             ),
-            False
+            No(Substitution.array)
+        ))
+        return current_self.substitute_all(substs).dnorm.equivalent(
+            current_other.substitute_all(substs).dnorm
         )
 
     @langkit_property(return_type=UnifyEquation, uses_entity_info=False,

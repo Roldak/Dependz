@@ -863,17 +863,42 @@ class Term(DefTerm):
             )
         )
 
+    @langkit_property(return_type=T.Bool)
+    def contains_term(t=T.Term, include_self=(T.Bool, False)):
+        return If(
+            include_self & Self.equivalent(t),
+            True,
+            Self.match(
+                lambda id=Identifier: False,
+                lambda ap=Apply: Or(
+                    ap.lhs.contains_term(t, True),
+                    ap.rhs.contains_term(t, True)
+                ),
+                lambda ab=Abstraction: Or(
+                    ab.ident.contains_term(t, True),
+                    ab.term.contains_term(t, True)
+                )
+            )
+        )
+
     @langkit_property(public=True, return_type=T.Term, memoized=False)
     def normalize():
-        return Self.eval.match(
-            lambda id=Identifier: id,
-            lambda ap=Apply: ap.parent.make_apply(
-                ap.lhs.normalize,
-                ap.rhs.normalize
-            ),
-            lambda ab=Abstraction: ab.parent.make_abstraction(
-                ab.ident,
-                ab.term.normalize
+        evaled = Var(Self.eval)
+
+        return If(
+            # prevent infinite evaluation
+            evaled.contains_term(Self),
+            Self,
+            evaled.match(
+                lambda id=Identifier: id,
+                lambda ap=Apply: ap.parent.make_apply(
+                    ap.lhs.normalize,
+                    ap.rhs.normalize
+                ),
+                lambda ab=Abstraction: ab.parent.make_abstraction(
+                    ab.ident,
+                    ab.term.normalize
+                )
             )
         )
 

@@ -34,3 +34,5 @@ my_pair = mk_pair One Two
 test_pair : Pair
 test_pair = mk_pair (snd my_pair) (fst my_pair)
 
+test_add : Nat -> Nat -> Nat
+test_add = \a.\b. add b a

@@ -26,5 +26,8 @@ test_elim_3 = elim_nat Nat (\n. Vec Nat Z)
 test_elim_4 : n:Nat -> elim_nat Nat (Vec Nat) n
 test_elim_4 = elim_nat Z test_elim_2
 
-test_elim_5 : Vec Nat Z
-test_elim_5 = test_elim_4 (S Z)
+test_elim_5_a : Nat
+test_elim_5_a = test_elim_4 Z
+
+test_elim_5_b : Vec Nat Z
+test_elim_5_b = test_elim_4 (S Z)

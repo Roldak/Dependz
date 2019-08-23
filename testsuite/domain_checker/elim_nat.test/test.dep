@@ -31,3 +31,6 @@ test_elim_5_a = test_elim_4 Z
 
 test_elim_5_b : Vec Nat Z
 test_elim_5_b = test_elim_4 (S Z)
+
+test_elim_6 : n:Nat -> elim_nat Nat (\x. Vec (Vec Nat x) Z) n
+test_elim_6 = elim_nat Z (\x. Nil)

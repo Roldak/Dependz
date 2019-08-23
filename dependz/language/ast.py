@@ -279,11 +279,36 @@ class DefTerm(DependzNode):
             )
         )
 
-    @langkit_property(return_type=T.Bool,
+    @langkit_property(return_type=T.DefTerm,
                       dynamic_vars=[unification_context])
+    def solve_time_substitution():
+        symbols = Var(unification_context.symbols)
+        vars = Var(unification_context.vars)
+
+        substs = Var(symbols.map(
+            lambda s: Substitution.new(
+                from_symbol=s,
+                to_term=vars.elem(s).get_value._.cast_or_raise(DefTerm).node
+            )
+        ).filter(
+            lambda s: Not(s.to_term.is_null)
+        ))
+
+        return Self.substitute_all(substs).dnorm
+
+    @langkit_property(return_type=T.Bool,
+                      dynamic_vars=[unification_context],
+                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def unifies_with(other=T.DefTerm):
+        current_self = Var(Self.solve_time_substitution.dnorm)
+        current_other = Var(other.solve_time_substitution.dnorm)
         return Try(
-            Let(lambda r=Self.unify(other, unification_context.symbols): True),
+            Let(
+                lambda r=current_self.unify(
+                    current_other,
+                    unification_context.symbols
+                ): True
+            ),
             False
         )
 
@@ -467,33 +492,16 @@ class DefTerm(DependzNode):
             Self.first_order_rigid_rigid_equation(other)
         )
 
-    @langkit_property(return_type=T.DefTerm,
-                      dynamic_vars=[unification_context])
-    def solve_time_substitution():
-        symbols = Var(unification_context.symbols)
-        vars = Var(unification_context.vars)
-
-        substs = Var(symbols.map(
-            lambda s: Substitution.new(
-                from_symbol=s,
-                to_term=vars.elem(s).get_value._.cast_or_raise(DefTerm).node
-            )
-        ).filter(
-            lambda s: Not(s.to_term.is_null)
-        ))
-
-        return Self.substitute_all(substs).dnorm
-
     @langkit_property(return_type=T.Bool,
                       dynamic_vars=[unification_context,
-                                    ho_unification_context])
+                                    ho_unification_context],
+                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def higher_order_check_current_solution():
         return Entity.parent.make_apply(
             Self.cast_or_raise(Term),
-            ho_unification_context.arg.solve_time_substitution
-            .cast_or_raise(Term)
-        ).normalize.equivalent(
-            ho_unification_context.res.solve_time_substitution
+            ho_unification_context.arg
+        ).unifies_with(
+            ho_unification_context.res
         )
 
     @langkit_property(return_type=T.DefTerm.entity,
@@ -788,7 +796,7 @@ class Term(DefTerm):
             Self
         )
 
-    @langkit_property(public=True, return_type=T.Term, memoized=False)
+    @langkit_property(public=True, return_type=T.Term, memoized=True)
     def eval():
         return Self.match(
             lambda id=Identifier: id.intro._.definition.then(

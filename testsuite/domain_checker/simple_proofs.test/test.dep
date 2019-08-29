@@ -1,0 +1,39 @@
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+Vec : Type -> Nat -> Type
+Nil : Vec t Z
+Cons : t -> Vec t n -> Vec t (S n)
+
+One : Nat
+One = S Z
+
+Two : Nat
+Two = S One
+
+Three : Nat
+Three = S Two
+
+Eq : t -> t -> Type
+Refl : Eq x x
+
+test_simple : n:Nat -> Eq n n
+test_simple = \x. Refl
+
+cong : Eq a b -> Eq (f a) (f b)
+replace : Eq a b -> P a -> P b
+hole : t
+
+elim_nat : P Z -> (k:Nat -> P (S k)) -> x:Nat -> P x
+elim_nat = \b. \p. match (case Z b (case S p))
+
+add : Nat -> Nat -> Nat
+add = elim_nat (\y. y) (\x.\y. S (add x y))
+
+cong    : Eq a b -> Eq (f a) (f b)
+sym     : Eq a b -> Eq b a
+replace : Eq a b -> Eq (P a) c -> Eq (P b) c
+
+test_plus_reduces_Z : n:Nat -> Eq n (add n Z)
+test_plus_reduces_Z = elim_nat Refl (\k. cong (test_plus_reduces_Z k))

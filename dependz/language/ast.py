@@ -114,14 +114,26 @@ class DependzNode(ASTNode):
     def make_abstraction_from_self(id=T.Identifier, rhs=T.Term):
         return SyntheticAbstraction.new(ident=id, term=rhs)
 
-    @langkit_property(memoized=True,  return_type=T.SyntheticArrow)
+    @langkit_property(memoized=True, return_type=T.SyntheticArrow)
     def make_arrow_from_self(t1=T.DefTerm, t2=T.DefTerm,
                              t3=(T.Term, No(T.Term))):
         return SyntheticArrow.new(lhs=t1, rhs=t2, binder=t3)
 
+    @langkit_property(return_type=T.Symbol)
+    def unique_fresh_symbol(prefix=T.Symbol):
+        return Self.concat_symbol_and_integer(
+            prefix,
+            Self.unit.root.next_global_integer
+        )
+
+    @langkit_property(external=True, return_type=T.Int,
+                      uses_entity_info=False, uses_envs=False)
+    def next_global_integer():
+        pass
+
     @langkit_property(external=True, return_type=T.Symbol,
                       uses_entity_info=False, uses_envs=False)
-    def fresh_symbol(prefix=T.Symbol):
+    def concat_symbol_and_integer(s=T.Symbol, i=T.Int):
         pass
 
     @langkit_property(external=True, return_type=T.LogicVar,
@@ -275,8 +287,9 @@ class DefTerm(DependzNode):
                 )
             ),
             lambda ab=Abstraction: other.cast(Abstraction).then(
-                lambda o: Self.fresh_symbol("eq").then(
-                    lambda sym: ab.term.rename(ab.ident.sym, sym).equivalent(
+                lambda o: ab.term.free_fresh_symbol("eq", o.term).then(
+                    lambda sym:
+                    ab.term.rename(ab.ident.sym, sym).equivalent(
                         o.term.rename(o.ident.sym, sym)
                     )
                 )
@@ -418,7 +431,7 @@ class DefTerm(DependzNode):
             lambda ab=Abstraction: unify_case(
                 Abstraction,
                 lambda o: Let(
-                    lambda sym=Self.fresh_symbol("eq"): Let(
+                    lambda sym=ab.term.free_fresh_symbol("eq", o.term): Let(
                         lambda
                         rab=ab.term.rename(ab.ident.sym, sym),
                         rob=o.term.rename(o.ident.sym, sym):
@@ -526,21 +539,22 @@ class DefTerm(DependzNode):
                       dynamic_vars=[unification_context,
                                     ho_unification_context])
     def higher_order_construct_imitation():
-        fresh_sym = Var(Self.fresh_symbol("ho"))
         res = Var(ho_unification_context.res)
+        body = Var(res.solve_time_substitution.cast_or_raise(Term))
+        fresh_sym = Var(body.free_fresh_symbol("ho"))
 
         return Entity.make_abstraction(
             Self.make_ident(fresh_sym),
-            res.solve_time_substitution.cast_or_raise(Term)
+            body
         ).as_bare_entity
 
     @langkit_property(return_type=T.DefTerm.entity,
                       dynamic_vars=[unification_context,
                                     ho_unification_context])
     def higher_order_construct_projection():
-        fresh_sym = Var(Self.fresh_symbol("ho"))
         arg = Var(ho_unification_context.arg)
         res = Var(ho_unification_context.res)
+        fresh_sym = Var(res.free_fresh_symbol("ho"))
 
         return Entity.make_abstraction(
             Self.make_ident(fresh_sym),
@@ -760,6 +774,16 @@ class DefTerm(DependzNode):
             | ar.binder._.is_free(sym)
         )
 
+    @langkit_property(return_type=T.Symbol)
+    def free_fresh_symbol(prefix=T.Symbol, other=(T.DefTerm, No(T.DefTerm)),
+                          i=(T.Int, 0)):
+        sym = Var(Self.concat_symbol_and_integer(prefix, i))
+        return If(
+            And(Self.is_free(sym), Or(other.is_null, other.is_free(sym))),
+            Self.free_fresh_symbol(prefix, other, i + 1),
+            sym
+        )
+
 
 @abstract
 class Term(DefTerm):
@@ -854,7 +878,7 @@ class Term(DefTerm):
                 ab,
                 If(
                     val.is_free(ab.ident.sym),
-                    ab.fresh_symbol(ab.ident.sym).then(
+                    ab.term.free_fresh_symbol(ab.ident.sym).then(
                         lambda symp: ab.make_abstraction(
                             ab.make_ident(symp),
                             ab.term
@@ -1350,7 +1374,7 @@ class Introduction(DependzNode):
     def as_template(origin_term=T.Term):
         renamings = Var(Self.generic_formals.map(lambda s: Renaming.new(
             from_symbol=s,
-            to_symbol=Self.fresh_symbol(s)
+            to_symbol=Self.unique_fresh_symbol(s)
         )))
         return Template.new(
             origin=origin_term,

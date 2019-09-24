@@ -1,16 +1,32 @@
 Fresh_Symbol_Count : Integer := 0;
 
-function P_Fresh_Symbol
-  (Node : access Bare_Dependz_Node_Type'Class; Prefix : Symbol_Type)
-   return Symbol_Type
+package Node_To_Int_Maps is new Ada.Containers.Hashed_Maps
+  (Key_Type        => Mmz_Key_Item,
+   Element_Type    => Natural,
+   Hash            => Hash,
+   Equivalent_Keys => "=");
+
+Global_Integer_Map : Node_To_Int_Maps.Map;
+
+function P_Next_Global_Integer
+  (Node : access Bare_Dependz_Node_Type'Class) return Integer
 is
-   Fresh_Count : Wide_Wide_String := Fresh_Symbol_Count'Wide_Wide_Image;
+   Key : Mmz_Key_Item :=
+     (Kind => Mmz_Bare_Dependz_Node,
+      As_Bare_Dependz_Node => Bare_Dependz_Node (Node));
+
+   Elem : Node_To_Int_Maps.Cursor := Global_Integer_Map.Find (Key);
+
+   Result : Integer := 0;
 begin
-   Fresh_Symbol_Count := Fresh_Symbol_Count + 1;
-   return Lookup_Symbol
-     (Node.Unit.Context,
-      Image (Prefix) & "$" & Fresh_Count (2 .. Fresh_Count'Last));
-end P_Fresh_Symbol;
+   if Node_To_Int_Maps.Has_Element(Elem) then
+      Result := Node_To_Int_Maps.Element(Elem) + 1;
+      Global_Integer_Map.Replace_Element(Elem, Result);
+   else
+      Global_Integer_Map.Insert(Key, Result);
+   end if;
+   return Result;
+end P_Next_Global_Integer;
 
 function P_Create_Logic_Var
   (Node : access Bare_Dependz_Node_Type'Class) return Logic_Var is
@@ -25,3 +41,15 @@ begin
    Set_Debug_State (Debug_State_Type'Val (Mode));
    return True;
 end P_Set_Logic_Equation_Debug_Mode;
+
+function P_Concat_Symbol_And_Integer
+  (Node : access Bare_Dependz_Node_Type'Class;
+   S : Symbol_Type;
+   I : Integer) return Symbol_Type
+is
+   Int_Str : Wide_Wide_String := I'Wide_Wide_Image;
+begin
+   return Lookup_Symbol
+     (Node.Unit.Context,
+      Image (S) & "$" & Int_Str (2 .. Int_Str'Last));
+end P_Concat_Symbol_And_Integer;

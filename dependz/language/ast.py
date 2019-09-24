@@ -81,26 +81,43 @@ class DependzNode(ASTNode):
     """
     Root node class for Dependz AST nodes.
     """
-    @langkit_property(public=True, memoized=True)
+    @langkit_property(public=True)
     def make_ident(name=T.Symbol):
-        return FreshId.new(name=name)
+        return Self.unit.root.make_ident_from_self(name)
 
-    @langkit_property(public=True, memoized=True)
+    @langkit_property(public=True)
     def make_apply(t1=T.Term, t2=T.Term):
-        return SyntheticApply.new(lhs=t1, rhs=t2)
+        return Self.unit.root.make_apply_from_self(t1, t2)
 
-    @langkit_property(public=True, memoized=True)
+    @langkit_property(public=True)
     def make_abstraction(id=T.Identifier, rhs=T.Term):
-        return SyntheticAbstraction.new(ident=id, term=rhs)
+        return Self.unit.root.make_abstraction_from_self(id, rhs)
 
-    @langkit_property(public=True, memoized=True)
+    @langkit_property(public=True)
     def make_arrow(t1=T.DefTerm, t2=T.DefTerm,
                    t3=(T.Term, No(T.Term))):
-        return SyntheticArrow.new(lhs=t1, rhs=t2, binder=t3)
+        return Self.unit.root.make_arrow_from_self(t1, t2, t3)
 
     @langkit_property(return_type=T.LogicVarArray, memoized=True)
     def make_logic_var_array():
         return LogicVarArray.new()
+
+    @langkit_property(memoized=True, return_type=T.FreshId)
+    def make_ident_from_self(name=T.Symbol):
+        return FreshId.new(name=name)
+
+    @langkit_property(memoized=True, return_type=T.SyntheticApply)
+    def make_apply_from_self(t1=T.Term, t2=T.Term):
+        return SyntheticApply.new(lhs=t1, rhs=t2)
+
+    @langkit_property(memoized=True, return_type=T.SyntheticAbstraction)
+    def make_abstraction_from_self(id=T.Identifier, rhs=T.Term):
+        return SyntheticAbstraction.new(ident=id, term=rhs)
+
+    @langkit_property(memoized=True,  return_type=T.SyntheticArrow)
+    def make_arrow_from_self(t1=T.DefTerm, t2=T.DefTerm,
+                             t3=(T.Term, No(T.Term))):
+        return SyntheticArrow.new(lhs=t1, rhs=t2, binder=t3)
 
     @langkit_property(external=True, return_type=T.Symbol,
                       uses_entity_info=False, uses_envs=False)
@@ -208,33 +225,33 @@ class DefTerm(DependzNode):
     def normalized_domain():
         return Entity.node.dnorm.as_entity
 
-    @langkit_property(return_type=T.DefTerm)
+    @langkit_property(return_type=T.DefTerm, memoized=True)
     def dnorm():
         return Self.match(
             lambda t=Term: t.normalize,
-            lambda a=Arrow: a.parent.make_arrow(
+            lambda a=Arrow: a.make_arrow(
                 a.lhs.dnorm,
                 a.rhs.dnorm,
                 a.binder._.normalize
             )
         )
 
-    @langkit_property(return_type=T.DefTerm, public=True)
+    @langkit_property(return_type=T.DefTerm, public=True, memoized=True)
     def renamed_domain(old=T.Symbol, by=T.Symbol):
         return Self.match(
             lambda t=Term: t.rename(old, by),
-            lambda ar=Arrow: Self.parent.make_arrow(
+            lambda ar=Arrow: Self.make_arrow(
                 ar.lhs.renamed_domain(old, by),
                 ar.rhs.renamed_domain(old, by),
                 ar.binder._.rename(old, by)
             )
         )
 
-    @langkit_property(return_type=T.DefTerm, public=True)
+    @langkit_property(return_type=T.DefTerm, public=True, memoized=True)
     def substituted_domain(sym=T.Symbol, val=T.DefTerm):
         return Self.match(
             lambda t=Term: t.substitute(sym, val.cast_or_raise(Term)),
-            lambda ar=Arrow: Self.parent.make_arrow(
+            lambda ar=Arrow: Self.make_arrow(
                 ar.lhs.substituted_domain(sym, val),
                 ar.rhs.substituted_domain(sym, val),
                 ar.binder._.substitute(sym, val.cast_or_raise(Term))
@@ -245,7 +262,7 @@ class DefTerm(DependzNode):
     def equivalent_entities(other=T.DefTerm.entity):
         return Entity.node.equivalent(other.node)
 
-    @langkit_property(return_type=T.Bool)
+    @langkit_property(return_type=T.Bool, memoized=True)
     def equivalent(other=T.DefTerm):
         return Self.match(
             lambda id=Identifier: other.cast(Identifier).then(
@@ -498,7 +515,7 @@ class DefTerm(DependzNode):
                                     ho_unification_context],
                       activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def higher_order_check_current_solution():
-        return Entity.parent.make_apply(
+        return Entity.make_apply(
             Self.cast_or_raise(Term),
             ho_unification_context.arg
         ).unifies_with(
@@ -512,8 +529,8 @@ class DefTerm(DependzNode):
         fresh_sym = Var(Self.fresh_symbol("ho"))
         res = Var(ho_unification_context.res)
 
-        return Entity.parent.make_abstraction(
-            Self.parent.make_ident(fresh_sym),
+        return Entity.make_abstraction(
+            Self.make_ident(fresh_sym),
             res.solve_time_substitution.cast_or_raise(Term)
         ).as_bare_entity
 
@@ -525,8 +542,8 @@ class DefTerm(DependzNode):
         arg = Var(ho_unification_context.arg)
         res = Var(ho_unification_context.res)
 
-        return Entity.parent.make_abstraction(
-            Self.parent.make_ident(fresh_sym),
+        return Entity.make_abstraction(
+            Self.make_ident(fresh_sym),
             res.solve_time_substitution.cast_or_raise(Term).anti_substitute(
                 arg.solve_time_substitution.cast_or_raise(Term),
                 fresh_sym
@@ -669,7 +686,7 @@ class DefTerm(DependzNode):
             second=other
         ).singleton, symbols)
 
-    @langkit_property(public=True, return_type=T.Symbol.array)
+    @langkit_property(public=True, return_type=T.Symbol.array, memoized=True)
     def free_symbols(deep=(T.Bool, False)):
         return Self.free_symbols_impl(deep, 0)
 
@@ -784,7 +801,7 @@ class Term(DefTerm):
             PropertyError(T.Term, "expected `case`")
         )
 
-    @langkit_property(return_type=T.Term)
+    @langkit_property(return_type=T.Term, memoized=True)
     def eval_match():
         elim_call = Var(Self.cast_or_raise(Apply))
         elim_evaled = Var(elim_call.lhs.eval.cast(Apply))
@@ -820,7 +837,7 @@ class Term(DefTerm):
             )._or(ab)
         )
 
-    @langkit_property(public=True, return_type=T.Term)
+    @langkit_property(public=True, return_type=T.Term, memoized=True)
     def substitute(sym=T.Symbol, val=T.Term):
         return Self.match(
             lambda id=Identifier: If(
@@ -828,7 +845,7 @@ class Term(DefTerm):
                 val,
                 id
             ),
-            lambda ap=Apply: ap.parent.make_apply(
+            lambda ap=Apply: ap.make_apply(
                 ap.lhs.substitute(sym, val),
                 ap.rhs.substitute(sym, val)
             ),
@@ -838,14 +855,14 @@ class Term(DefTerm):
                 If(
                     val.is_free(ab.ident.sym),
                     ab.fresh_symbol(ab.ident.sym).then(
-                        lambda symp: ab.parent.make_abstraction(
+                        lambda symp: ab.make_abstraction(
                             ab.make_ident(symp),
                             ab.term
                             .rename(ab.ident.sym, symp)
                             .substitute(sym, val)
                         )
                     ),
-                    ab.parent.make_abstraction(
+                    ab.make_abstraction(
                         ab.ident,
                         ab.term.substitute(sym, val)
                     )
@@ -853,18 +870,18 @@ class Term(DefTerm):
             )
         )
 
-    @langkit_property(return_type=T.Term)
+    @langkit_property(return_type=T.Term, memoized=True)
     def anti_substitute(val=T.Term, sym=T.Symbol):
         return If(
             Self.equivalent(val),
             Self.make_ident(sym),
             Self.match(
                 lambda id=Identifier: id,
-                lambda ap=Apply: ap.parent.make_apply(
+                lambda ap=Apply: ap.make_apply(
                     ap.lhs.anti_substitute(val, sym),
                     ap.rhs.anti_substitute(val, sym)
                 ),
-                lambda ab=Abstraction: ab.parent.make_abstraction(
+                lambda ab=Abstraction: ab.make_abstraction(
                     ab.ident.anti_substitute(val, sym)
                     .cast_or_raise(Identifier),
                     ab.term.anti_substitute(val, sym)
@@ -872,7 +889,7 @@ class Term(DefTerm):
             )
         )
 
-    @langkit_property(return_type=T.Bool)
+    @langkit_property(return_type=T.Bool, memoized=True)
     def contains_term(t=T.Term, include_self=(T.Bool, False)):
         return If(
             include_self & Self.equivalent(t),
@@ -890,7 +907,7 @@ class Term(DefTerm):
             )
         )
 
-    @langkit_property(public=True, return_type=T.Term, memoized=False)
+    @langkit_property(public=True, return_type=T.Term, memoized=True)
     def normalize():
         evaled = Var(Self.eval)
 
@@ -900,33 +917,33 @@ class Term(DefTerm):
             Self,
             evaled.match(
                 lambda id=Identifier: id,
-                lambda ap=Apply: ap.parent.make_apply(
+                lambda ap=Apply: ap.make_apply(
                     ap.lhs.normalize,
                     ap.rhs.normalize
                 ),
-                lambda ab=Abstraction: ab.parent.make_abstraction(
+                lambda ab=Abstraction: ab.make_abstraction(
                     ab.ident,
                     ab.term.normalize
                 )
             )
         )
 
-    @langkit_property(return_type=T.Term, public=True)
+    @langkit_property(return_type=T.Term, public=True, memoized=True)
     def rename(old=T.Symbol, by=T.Symbol):
         return Self.match(
             lambda id=Identifier: If(
                 id.sym == old,
-                id.parent.make_ident(by),
+                id.make_ident(by),
                 id
             ),
-            lambda ap=Apply: ap.parent.make_apply(
+            lambda ap=Apply: ap.make_apply(
                 ap.lhs.rename(old, by),
                 ap.rhs.rename(old, by)
             ),
             lambda ab=Abstraction: If(
                 old == ab.ident.sym,
                 ab,
-                ab.parent.make_abstraction(
+                ab.make_abstraction(
                     ab.ident,
                     ab.term.rename(old, by)
                 )
@@ -1061,7 +1078,7 @@ class Term(DefTerm):
             return Let(
                 lambda
                 lhs_res=ap.lhs.instantiate_templates(
-                    Self.parent.make_arrow(
+                    Self.make_arrow(
                         No(T.DefTerm),
                         result_domain
                     ),
@@ -1143,7 +1160,7 @@ class Term(DefTerm):
 
                 TypingsDescription.new(
                     bindings=make_binding(
-                        Self.parent.make_arrow(
+                        Self.make_arrow(
                             ab.ident.domain_val._or(
                                 result_domain._.cast(Arrow).lhs
                             ),
@@ -1184,7 +1201,8 @@ class Identifier(Term):
     def is_introducing():
         return Self.parent.is_a(Introduction)
 
-    @langkit_property(public=True, return_type=T.Introduction.entity)
+    @langkit_property(public=True, return_type=T.Introduction.entity,
+                      memoized=True)
     def intro():
         return Self.node_env.get_first(Self.sym).cast(Introduction)
 
@@ -1217,7 +1235,7 @@ class Apply(Term):
 
     @langkit_property(return_type=Term)
     def replace_left_most_term_with(other=Term):
-        return Self.parent.make_apply(
+        return Self.make_apply(
             Self.lhs.cast(Apply).then(
                 lambda ap: ap.replace_left_most_term_with(other),
                 default_val=other
@@ -1240,7 +1258,7 @@ class Abstraction(Term):
         actual_self = Var(If(
             Self.is_synthesized,
             Self.first_available_standard_symbol.then(
-                lambda s: Self.parent.make_abstraction(
+                lambda s: Self.make_abstraction(
                     Self.make_ident(s),
                     Self.term.rename(Self.ident.sym, s)
                 ),
@@ -1318,7 +1336,8 @@ class Introduction(DependzNode):
     ident = Field(type=SourceId)
     term = Field(type=DefTerm)
 
-    @langkit_property(public=True, return_type=T.Definition.entity)
+    @langkit_property(public=True, return_type=T.Definition.entity,
+                      memoized=True)
     def definition():
         return Self.children_env.get_first('__definition').cast(T.Definition)
 

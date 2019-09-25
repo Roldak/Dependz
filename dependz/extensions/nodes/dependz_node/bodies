@@ -53,3 +53,31 @@ begin
      (Node.Unit.Context,
       Image (S) & "$" & Int_Str (2 .. Int_Str'Last));
 end P_Concat_Symbol_And_Integer;
+
+function P_Dump_Mmz_Map
+  (Node : access Bare_Dependz_Node_Type'Class) return Boolean
+is
+   use Memoization_Maps;
+   Mmz_Map : Map renames Node.Unit.Memoization_Map;
+   C : Cursor := Mmz_Map.First;
+begin
+   loop
+      exit when C = No_Element;
+      declare
+         K : Mmz_Key := Memoization_Maps.Key (C);
+         N : Bare_Def_Term;
+      begin
+         case K.Property is
+            when Mmz_Bare_Term_P_Normalize =>
+               N := Convert_Dependz_Node_To_Def_Term
+                 (Convert_Term_To_Dependz_Node (K.Items (1).As_Bare_Term));
+               Put_Line (Image (P_To_String (N).Items));
+            when others =>
+               null;
+         end case;
+      end;
+      C := Memoization_Maps.Next (C);
+   end loop;
+   Put_Line (Memoization_Maps.Length (Mmz_Map)'Image);
+   return True;
+end P_Dump_Mmz_Map;

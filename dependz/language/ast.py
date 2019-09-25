@@ -150,6 +150,11 @@ class DependzNode(ASTNode):
     def here():
         return Self
 
+    @langkit_property(public=True, external=True, return_type=T.Bool,
+                      uses_entity_info=False, uses_envs=False)
+    def dump_mmz_map():
+        pass
+
     @langkit_property(return_type=Substitution.array,
                       activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def unify_all(queries=UnifyQuery.array, symbols=T.Symbol.array):

@@ -1245,7 +1245,9 @@ class Identifier(Term):
 
     @langkit_property(public=True, return_type=T.Bool)
     def is_introducing():
-        return Self.parent.is_a(Introduction)
+        return Self.parent.cast(Introduction).then(
+            lambda i: i.ident == Self
+        )
 
     @langkit_property(public=True, return_type=T.Introduction.entity,
                       memoized=True)

@@ -157,17 +157,22 @@ class DependzNode(ASTNode):
 
     @langkit_property(return_type=Substitution.array,
                       activate_tracing=GLOBAL_ACTIVATE_TRACING)
-    def unify_all(queries=UnifyQuery.array, symbols=T.Symbol.array):
+    def unify_all(queries=UnifyQuery.array, symbols=T.Symbol.array,
+                  allow_incomplete=(T.Bool, False)):
         vars = Var(Self.make_logic_var_array)
-        query_results = Var(queries.map(
-            lambda q: unification_context.bind(
-                UnificationContext.new(
-                    symbols=symbols,
-                    vars=vars
-                ),
-                q.first.unify_equation(q.second)
+
+        def construct_equations():
+            return queries.map(
+                lambda q: unification_context.bind(
+                    UnificationContext.new(
+                        symbols=symbols,
+                        vars=vars
+                    ),
+                    q.first.unify_equation(q.second)
+                )
             )
-        ))
+
+        query_results = Var(construct_equations())
         unify_eq = Var(Or(
             query_results.logic_all(lambda r: r.eq),
             LogicTrue()
@@ -213,10 +218,21 @@ class DependzNode(ASTNode):
         )
         return Cond(
             incomplete,
-            substs.concat(Self.unify_all(new_queries, left_symbols)),
+            substs.concat(
+                Self.unify_all(new_queries, left_symbols, allow_incomplete)
+            ),
 
-            res,
-            substs,
+            res | allow_incomplete,
+            Try(
+                construct_equations().logic_all(lambda r: r.eq).solve,
+                True
+            ).then(
+                lambda _: substs,
+                default_val=PropertyError(
+                    Substitution.array,
+                    "Unification failed (terms are not unifiable)"
+                )
+            ),
 
             PropertyError(
                 Substitution.array,
@@ -337,15 +353,15 @@ class DefTerm(DependzNode):
     def unifies_with(other=T.DefTerm):
         current_self = Var(Self.solve_time_substitution.dnorm)
         current_other = Var(other.solve_time_substitution.dnorm)
-        substs = Var(Try(
-            current_self.unify(
-                current_other,
-                unification_context.symbols
+        return Try(
+            Let(
+                lambda substs=current_self.unify(
+                    current_other,
+                    unification_context.symbols,
+                    allow_incomplete=True
+                ): True
             ),
-            No(Substitution.array)
-        ))
-        return current_self.substitute_all(substs).dnorm.equivalent(
-            current_other.substitute_all(substs).dnorm
+            False
         )
 
     @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
@@ -699,11 +715,12 @@ class DefTerm(DependzNode):
         )
 
     @langkit_property(public=True, return_type=Substitution.array)
-    def unify(other=T.DefTerm, symbols=T.Symbol.array):
+    def unify(other=T.DefTerm, symbols=T.Symbol.array,
+              allow_incomplete=(T.Bool, False)):
         return Self.unify_all(UnifyQuery.new(
             first=Self,
             second=other
-        ).singleton, symbols)
+        ).singleton, symbols, allow_incomplete)
 
     @langkit_property(public=True, return_type=T.Symbol.array, memoized=True)
     def free_symbols(deep=(T.Bool, False)):

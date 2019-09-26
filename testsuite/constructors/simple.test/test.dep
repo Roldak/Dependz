@@ -1,0 +1,43 @@
+Type : Type1
+
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+test_nat : Nat
+test_nat = Z
+
+Vec : Type -> Nat -> Type
+Nil : Vec t Z
+Cons : t -> Vec t n -> Vec t (S n)
+
+test_vec_1 : Vec Nat Z
+test_vec_1 = hole
+
+test_vec_2 : Vec Nat (S Z)
+test_vec_2 = hole
+
+test_vec_3 : Vec t Z
+test_vec_3 = hole
+
+test_vec_4 : Vec t (S n)
+test_vec_4 = hole
+
+test_vec_5 : Vec Nat m
+test_vec_5 = hole
+
+test_vec_6 : Vec t m
+test_vec_6 = hole
+
+Lt : Nat -> Nat -> Type
+Lt_Z : Lt Z (S n)
+Lt_S : Lt m n -> Lt (S m) (S n)
+
+test_lt_1 : Lt Z (S (S Z))
+test_lt_1 = hole
+
+test_lt_2 : Lt (S (S Z)) (S Z)
+test_lt_2 = hole
+
+test_lt_3 : Lt (S Z) Z
+test_lt_3 = hole

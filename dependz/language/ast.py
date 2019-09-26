@@ -722,6 +722,53 @@ class DefTerm(DependzNode):
             second=other
         ).singleton, symbols, allow_incomplete)
 
+    @langkit_property(return_type=T.DefTerm, memoized=True)
+    def final_result_domain():
+        return Self.dnorm.match(
+            lambda ar=Arrow: ar.rhs.final_result_domain,
+            lambda x: x
+        )
+
+    @langkit_property(public=True, return_type=T.Term.entity.array)
+    def constructors():
+        normed = Var(Self.dnorm)
+
+        ignore(Var(Cond(
+            normed.is_a(Arrow),
+            PropertyError(T.Bool, "Cannot list constructors of arrow types"),
+
+            normed.is_a(Abstraction),
+            PropertyError(T.Bool, "Abstractions are not valid domains"),
+
+            True
+        )))
+
+        generics = Var(normed.free_symbols)
+        constrs = Var(normed.unit.root.cast(Program).all_constructors.map(
+            lambda c: c.as_template(c.ident)
+        ))
+
+        return constrs.filter(
+            lambda c: Let(
+                lambda inst=c.instance.final_result_domain:
+
+                Try(
+                    Let(
+                        lambda substs=inst.unify(
+                            normed,
+                            c.new_symbols.concat(generics),
+                            allow_incomplete=True
+                        ):
+
+                        True
+                    ),
+                    False
+                )
+            )
+        ).map(
+            lambda c: c.origin.as_bare_entity
+        )
+
     @langkit_property(public=True, return_type=T.Symbol.array, memoized=True)
     def free_symbols(deep=(T.Bool, False)):
         return Self.free_symbols_impl(deep, 0)

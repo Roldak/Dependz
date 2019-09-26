@@ -1,0 +1,20 @@
+test_nat: Success
+  [u'Z', u'S']
+test_vec_1: Success
+  [u'Nil']
+test_vec_2: Success
+  [u'Cons']
+test_vec_3: Success
+  [u'Nil']
+test_vec_4: Success
+  [u'Cons']
+test_vec_5: Success
+  [u'Cons', u'Nil']
+test_vec_6: Success
+  [u'Cons', u'Nil']
+test_lt_1: Success
+  [u'Lt_Z']
+test_lt_2: Success
+  [u'Lt_S']
+test_lt_3: Success
+  []

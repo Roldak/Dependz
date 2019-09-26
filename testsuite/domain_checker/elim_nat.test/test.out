@@ -54,3 +54,13 @@ test_elim_6: Success
   <Abstraction test.dep:36:27-36:34>: (k:Nat -> ((Vec ((Vec Nat) k)) Z))
   <SourceId test.dep:36:28-36:29>: Nat
   <SourceId test.dep:36:31-36:34>: ((Vec ((Vec Nat) k)) Z)
+test_elim_7: Success
+  <Apply test.dep:39:15-39:40>: ((Vec ((Vec Nat) (S (S Z)))) Z)
+  <SourceId test.dep:39:15-39:26>: ((S (S (S Z))):Nat -> ((Vec ((Vec Nat) (S (S Z)))) Z))
+  <Apply test.dep:39:28-39:39>: Nat
+  <SourceId test.dep:39:28-39:29>: (Nat -> Nat)
+  <Apply test.dep:39:31-39:38>: Nat
+  <SourceId test.dep:39:31-39:32>: (Nat -> Nat)
+  <Apply test.dep:39:34-39:37>: Nat
+  <SourceId test.dep:39:34-39:35>: (Nat -> Nat)
+  <SourceId test.dep:39:36-39:37>: Nat

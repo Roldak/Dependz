@@ -1487,6 +1487,21 @@ class Definition(DependzNode):
 
 
 class Program(DependzNode.list):
+    @langkit_property(return_type=Introduction.array,
+                      memoized=True)
+    def all_introductions():
+        return Self.children_env.get(No(T.Symbol)).filtermap(
+            lambda n: n.cast(Introduction).node,
+            lambda n: n.is_a(Introduction)
+        )
+
+    @langkit_property(return_type=Introduction.array,
+                      memoized=True)
+    def all_constructors():
+        return Self.all_introductions.filter(
+            lambda n: n.definition.is_null
+        )
+
     env_spec = EnvSpec(
         add_env()
     )

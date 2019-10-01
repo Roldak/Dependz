@@ -1,5 +1,5 @@
 test_nat: Success
-  [u'Z', u'S']
+  [u'S', u'Z']
 test_vec_1: Success
   [u'Nil']
 test_vec_2: Success

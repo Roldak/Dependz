@@ -14,3 +14,21 @@ test_plus_reduces_Z: Success
   <Apply test.dep:39:48-39:69>: ((Eq k) ((add k) Z))
   <SourceId test.dep:39:48-39:67>: (k:Nat -> ((Eq k) ((add k) Z)))
   <SourceId test.dep:39:68-39:69>: Nat
+test_plus_reduces_S: Success
+  <Apply test.dep:42:23-42:82>: (n:Nat -> (m:Nat -> ((Eq (S ((add n) m))) ((add n) (S m)))))
+  <Apply test.dep:42:23-42:42>: ((k:Nat -> (m:Nat -> ((Eq (S (S ((add k) m)))) (S ((add k) (S m)))))) -> (n:Nat -> (m:Nat -> ((Eq (S ((add n) m))) ((add n) (S m))))))
+  <SourceId test.dep:42:23-42:31>: ((m:Nat -> ((Eq (S m)) (S m))) -> ((k:Nat -> (m:Nat -> ((Eq (S (S ((add k) m)))) (S ((add k) (S m)))))) -> (n:Nat -> (m:Nat -> ((Eq (S ((add n) m))) ((add n) (S m)))))))
+  <Abstraction test.dep:42:33-42:41>: (m:Nat -> ((Eq (S m)) (S m)))
+  <SourceId test.dep:42:34-42:35>: Nat
+  <SourceId test.dep:42:37-42:41>: ((Eq (S m)) (S m))
+  <Abstraction test.dep:42:44-42:81>: (k:Nat -> (m:Nat -> ((Eq (S (S ((add k) m)))) (S ((add k) (S m))))))
+  <SourceId test.dep:42:45-42:46>: Nat
+  <Abstraction test.dep:42:47-42:81>: (m:Nat -> ((Eq (S (S ((add k) m)))) (S ((add k) (S m)))))
+  <SourceId test.dep:42:48-42:49>: Nat
+  <Apply test.dep:42:51-42:81>: ((Eq (S (S ((add k) m)))) (S ((add k) (S m))))
+  <SourceId test.dep:42:51-42:55>: (((Eq (S ((add k) m))) ((add k) (S m))) -> ((Eq (S (S ((add k) m)))) (S ((add k) (S m)))))
+  <Apply test.dep:42:57-42:80>: ((Eq (S ((add k) m))) ((add k) (S m)))
+  <Apply test.dep:42:57-42:78>: (m:Nat -> ((Eq (S ((add k) m))) ((add k) (S m))))
+  <SourceId test.dep:42:57-42:76>: (k:Nat -> (m:Nat -> ((Eq (S ((add k) m))) ((add k) (S m)))))
+  <SourceId test.dep:42:77-42:78>: Nat
+  <SourceId test.dep:42:79-42:80>: Nat

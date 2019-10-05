@@ -23,18 +23,18 @@ class Renaming(Struct):
 
 class Substitution(Struct):
     from_symbol = UserField(type=T.Symbol)
-    to_term = UserField(type=T.DefTerm)
+    to_term = UserField(type=T.Term)
 
 
 class Template(Struct):
     origin = UserField(type=T.Term)
-    instance = UserField(type=T.DefTerm)
+    instance = UserField(type=T.Term)
     new_symbols = UserField(type=T.Symbol.array)
 
 
 class Binding(Struct):
     target = UserField(type=T.Term)
-    domain_val = UserField(type=T.DefTerm)
+    domain_val = UserField(type=T.Term)
 
 
 class UnifyEquation(Struct):
@@ -48,8 +48,8 @@ class DomainEquation(Struct):
 
 
 class UnifyQuery(Struct):
-    first = UserField(type=T.DefTerm)
-    second = UserField(type=T.DefTerm)
+    first = UserField(type=T.Term)
+    second = UserField(type=T.Term)
 
 
 class TypingsDescription(Struct):
@@ -94,7 +94,7 @@ class DependzNode(ASTNode):
         return Self.unit.root.make_abstraction_from_self(id, rhs)
 
     @langkit_property(public=True)
-    def make_arrow(t1=T.DefTerm, t2=T.DefTerm,
+    def make_arrow(t1=T.Term, t2=T.Term,
                    t3=(T.Term, No(T.Term))):
         return Self.unit.root.make_arrow_from_self(t1, t2, t3)
 
@@ -115,7 +115,7 @@ class DependzNode(ASTNode):
         return SyntheticAbstraction.new(ident=id, term=rhs)
 
     @langkit_property(memoized=True, return_type=T.SyntheticArrow)
-    def make_arrow_from_self(t1=T.DefTerm, t2=T.DefTerm,
+    def make_arrow_from_self(t1=T.Term, t2=T.Term,
                              t3=(T.Term, No(T.Term))):
         return SyntheticArrow.new(lhs=t1, rhs=t2, binder=t3)
 
@@ -190,7 +190,7 @@ class DependzNode(ASTNode):
             symbols.map(
                 lambda s: Substitution.new(
                     from_symbol=s,
-                    to_term=vars.elem(s).get_value._.cast(DefTerm).rename_all(
+                    to_term=vars.elem(s).get_value._.cast(Term).rename_all(
                         renamings
                     )
                 )
@@ -198,8 +198,8 @@ class DependzNode(ASTNode):
         )
         new_queries = Var(queries.map(
             lambda q: UnifyQuery.new(
-                first=q.first.substitute_all(substs).dnorm,
-                second=q.second.substitute_all(substs).dnorm
+                first=q.first.substitute_all(substs).normalize,
+                second=q.second.substitute_all(substs).normalize
             )
         ))
         left_symbols = Var(symbols.filter(
@@ -249,88 +249,12 @@ class LogicVarArray(DependzNode):
 
 
 @abstract
-class DefTerm(DependzNode):
+class Term(DependzNode):
     annotations = Annotations(custom_trace_image=True)
 
     to_string = AbstractProperty(public=True, type=T.String)
 
-    @langkit_property(return_type=T.DefTerm.entity)
-    def normalized_domain():
-        return Entity.node.dnorm.as_entity
-
-    @langkit_property(return_type=T.DefTerm, memoized=True)
-    def dnorm():
-        return Self.match(
-            lambda t=Term: t.normalize,
-            lambda a=Arrow: a.make_arrow(
-                a.lhs.dnorm,
-                a.rhs.dnorm,
-                a.binder._.normalize
-            )
-        )
-
-    @langkit_property(return_type=T.DefTerm, public=True, memoized=True)
-    def renamed_domain(old=T.Symbol, by=T.Symbol):
-        return Self.match(
-            lambda t=Term: t.rename(old, by),
-            lambda ar=Arrow: Self.make_arrow(
-                ar.lhs.renamed_domain(old, by),
-                ar.rhs.renamed_domain(old, by),
-                ar.binder._.rename(old, by)
-            )
-        )
-
-    @langkit_property(return_type=T.DefTerm, public=True, memoized=True)
-    def substituted_domain(sym=T.Symbol, val=T.DefTerm):
-        return Self.match(
-            lambda t=Term: t.substitute(sym, val.cast_or_raise(Term)),
-            lambda ar=Arrow: Self.make_arrow(
-                ar.lhs.substituted_domain(sym, val),
-                ar.rhs.substituted_domain(sym, val),
-                ar.binder._.substitute(sym, val.cast_or_raise(Term))
-            )
-        )
-
-    @langkit_property(public=True, return_type=T.Bool)
-    def equivalent_entities(other=T.DefTerm.entity):
-        return Entity.node.equivalent(other.node)
-
-    @langkit_property(return_type=T.Bool, memoized=True)
-    def equivalent(other=T.DefTerm):
-        return Self.match(
-            lambda id=Identifier: other.cast(Identifier).then(
-                lambda o: o.sym == id.sym
-            ),
-            lambda ap=Apply: other.cast(Apply).then(
-                lambda o: And(
-                    ap.lhs.equivalent(o.lhs),
-                    ap.rhs.equivalent(o.rhs)
-                )
-            ),
-            lambda ab=Abstraction: other.cast(Abstraction).then(
-                lambda o: ab.term.free_fresh_symbol("eq", o.term).then(
-                    lambda sym:
-                    ab.term.rename(ab.ident.sym, sym).equivalent(
-                        o.term.rename(o.ident.sym, sym)
-                    )
-                )
-            ),
-            lambda ar=Arrow: other.cast(Arrow).then(
-                lambda o: And(
-                    ar.lhs.equivalent(o.lhs),
-                    ar.rhs.equivalent(o.rhs),
-                    ar.binder.then(
-                        lambda b: o.binder.then(
-                            lambda ob: b.equivalent(ob),
-                            default_val=Not(ar.has_constraining_binder)
-                        ),
-                        default_val=Not(o.has_constraining_binder)
-                    )
-                )
-            )
-        )
-
-    @langkit_property(return_type=T.DefTerm,
+    @langkit_property(return_type=T.Term,
                       dynamic_vars=[unification_context])
     def solve_time_substitution():
         symbols = Var(unification_context.symbols)
@@ -339,20 +263,20 @@ class DefTerm(DependzNode):
         substs = Var(symbols.map(
             lambda s: Substitution.new(
                 from_symbol=s,
-                to_term=vars.elem(s).get_value._.cast_or_raise(DefTerm).node
+                to_term=vars.elem(s).get_value._.cast_or_raise(Term).node
             )
         ).filter(
             lambda s: Not(s.to_term.is_null)
         ))
 
-        return Self.substitute_all(substs).dnorm
+        return Self.substitute_all(substs).normalize
 
     @langkit_property(return_type=T.Bool,
                       dynamic_vars=[unification_context],
                       activate_tracing=GLOBAL_ACTIVATE_TRACING)
-    def unifies_with(other=T.DefTerm):
-        current_self = Var(Self.solve_time_substitution.dnorm)
-        current_other = Var(other.solve_time_substitution.dnorm)
+    def unifies_with(other=T.Term):
+        current_self = Var(Self.solve_time_substitution.normalize)
+        current_other = Var(other.solve_time_substitution.normalize)
         return Try(
             Let(
                 lambda substs=current_self.unify(
@@ -366,26 +290,26 @@ class DefTerm(DependzNode):
 
     @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
                       dynamic_vars=[unification_context])
-    def first_order_flexible_flexible_equation(other=T.DefTerm):
+    def first_order_flexible_flexible_equation(other=T.Term):
         vars = Var(unification_context.vars)
         self_var = Var(vars.elem(Self.cast(Identifier).sym))
         other_var = Var(vars.elem(other.cast(Identifier).sym))
 
         return UnifyEquation.new(
-            eq=Bind(self_var, other_var, eq_prop=DefTerm.equivalent_entities),
+            eq=Bind(self_var, other_var, eq_prop=Term.equivalent_entities),
             renamings=No(Renaming.array)
         )
 
     @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
                       dynamic_vars=[unification_context])
-    def first_order_flexible_semirigid_equation(other=T.DefTerm):
+    def first_order_flexible_semirigid_equation(other=T.Term):
         self_var = Var(
             unification_context.vars.elem(Self.cast(Identifier).sym)
         )
 
         return UnifyEquation.new(
             eq=And(
-                Predicate(DefTerm.unifies_with, self_var, other),
+                Predicate(Term.unifies_with, self_var, other),
                 LogicTrue()  # Bind(vars_in_flexible_eq, Self, conv_prop=...)
             ),
             renamings=No(Renaming.array)
@@ -393,7 +317,7 @@ class DefTerm(DependzNode):
 
     @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
                       dynamic_vars=[unification_context])
-    def first_order_flexible_rigid_equation(other=T.DefTerm):
+    def first_order_flexible_rigid_equation(other=T.Term):
         self_var = Var(
             unification_context.vars.elem(Self.cast(Identifier).sym)
         )
@@ -402,14 +326,14 @@ class DefTerm(DependzNode):
             eq=Bind(
                 self_var,
                 other.as_bare_entity,
-                eq_prop=DefTerm.equivalent_entities
+                eq_prop=Term.equivalent_entities
             ),
             renamings=No(Renaming.array)
         )
 
     @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
                       dynamic_vars=[unification_context])
-    def first_order_rigid_rigid_equation(other=T.DefTerm):
+    def first_order_rigid_rigid_equation(other=T.Term):
 
         def to_logic(bool):
             return If(bool, LogicTrue(), LogicFalse())
@@ -513,7 +437,7 @@ class DefTerm(DependzNode):
 
     @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
                       dynamic_vars=[unification_context])
-    def first_order_unify_equation(other=T.DefTerm):
+    def first_order_unify_equation(other=T.Term):
         symbols = Var(unification_context.symbols)
 
         self_is_metavar = Var(Self.cast(Identifier).then(
@@ -550,18 +474,18 @@ class DefTerm(DependzNode):
                       activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def higher_order_check_current_solution():
         return Entity.make_apply(
-            Self.cast_or_raise(Term),
+            Self,
             ho_unification_context.arg
         ).unifies_with(
             ho_unification_context.res
         )
 
-    @langkit_property(return_type=T.DefTerm.entity,
+    @langkit_property(return_type=T.Term.entity,
                       dynamic_vars=[unification_context,
                                     ho_unification_context])
     def higher_order_construct_imitation():
         res = Var(ho_unification_context.res)
-        body = Var(res.solve_time_substitution.cast_or_raise(Term))
+        body = Var(res.solve_time_substitution)
         fresh_sym = Var(body.free_fresh_symbol("ho"))
 
         return Entity.make_abstraction(
@@ -569,7 +493,7 @@ class DefTerm(DependzNode):
             body
         ).as_bare_entity
 
-    @langkit_property(return_type=T.DefTerm.entity,
+    @langkit_property(return_type=T.Term.entity,
                       dynamic_vars=[unification_context,
                                     ho_unification_context])
     def higher_order_construct_projection():
@@ -579,8 +503,8 @@ class DefTerm(DependzNode):
 
         return Entity.make_abstraction(
             Self.make_ident(fresh_sym),
-            res.solve_time_substitution.cast_or_raise(Term).anti_substitute(
-                arg.solve_time_substitution.cast_or_raise(Term),
+            res.solve_time_substitution.anti_substitute(
+                arg.solve_time_substitution,
                 fresh_sym
             )
         ).as_bare_entity
@@ -602,8 +526,8 @@ class DefTerm(DependzNode):
             Bind(
                 metavar,
                 Self.as_bare_entity,
-                eq_prop=DefTerm.equivalent_entities,
-                conv_prop=DefTerm.higher_order_construct_imitation
+                eq_prop=Term.equivalent_entities,
+                conv_prop=Term.higher_order_construct_imitation
             )
         ))
 
@@ -612,15 +536,15 @@ class DefTerm(DependzNode):
             Bind(
                 metavar,
                 Self.as_bare_entity,
-                eq_prop=DefTerm.equivalent_entities,
-                conv_prop=DefTerm.higher_order_construct_projection
+                eq_prop=Term.equivalent_entities,
+                conv_prop=Term.higher_order_construct_projection
             )
         ))
 
         ignore = Var(ho_unification_context.bind(
             ho_ctx,
             Predicate(
-                DefTerm.higher_order_check_current_solution,
+                Term.higher_order_check_current_solution,
                 metavar
             )
         ))
@@ -636,7 +560,7 @@ class DefTerm(DependzNode):
 
     @langkit_property(return_type=T.UnifyEquation,
                       dynamic_vars=[unification_context])
-    def higher_order_unify_equation(other=T.DefTerm, ho_term=T.Identifier):
+    def higher_order_unify_equation(other=T.Term, ho_term=T.Identifier):
         is_single_arg_equation = Var(And(
             Self.cast(Apply).lhs == ho_term,
             other.is_a(Term)
@@ -645,7 +569,7 @@ class DefTerm(DependzNode):
             is_single_arg_equation,
             Self.higher_order_single_arg_equation(
                 Self.cast(Apply).rhs,
-                other.cast_or_raise(Term),
+                other,
                 ho_term.sym
             ),
 
@@ -657,7 +581,7 @@ class DefTerm(DependzNode):
 
     @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
                       dynamic_vars=[unification_context])
-    def unify_equation(other=T.DefTerm):
+    def unify_equation(other=T.Term):
         symbols = Var(unification_context.symbols)
 
         def outermost_metavar_application_of(term):
@@ -692,46 +616,24 @@ class DefTerm(DependzNode):
             renamings=unify_eqs.mapcat(lambda eq: eq.renamings)
         )
 
-    @langkit_property(return_type=T.DefTerm)
-    def rename_all(renamings=Renaming.array, idx=(T.Int, 0)):
-        return renamings.at(idx).then(
-            lambda r:
-            Self.renamed_domain(r.from_symbol, r.to_symbol).rename_all(
-                renamings, idx + 1
-            ),
-            default_val=Self
-        )
-
-    @langkit_property(return_type=T.DefTerm)
-    def substitute_all(substs=Substitution.array, idx=(T.Int, 0)):
-        return substs.at(idx).then(
-            lambda r: Self.substituted_domain(
-                r.from_symbol,
-                r.to_term
-            ).substitute_all(
-                substs, idx + 1
-            ),
-            default_val=Self
-        )
-
     @langkit_property(public=True, return_type=Substitution.array)
-    def unify(other=T.DefTerm, symbols=T.Symbol.array,
+    def unify(other=T.Term, symbols=T.Symbol.array,
               allow_incomplete=(T.Bool, False)):
         return Self.unify_all(UnifyQuery.new(
             first=Self,
             second=other
         ).singleton, symbols, allow_incomplete)
 
-    @langkit_property(return_type=T.DefTerm, memoized=True)
+    @langkit_property(return_type=T.Term, memoized=True)
     def final_result_domain():
-        return Self.dnorm.match(
+        return Self.normalize.match(
             lambda ar=Arrow: ar.rhs.final_result_domain,
             lambda x: x
         )
 
     @langkit_property(public=True, return_type=T.Term.entity.array)
     def constructors():
-        normed = Var(Self.dnorm)
+        normed = Var(Self.normalize)
 
         ignore(Var(Cond(
             normed.is_a(Arrow),
@@ -844,7 +746,7 @@ class DefTerm(DependzNode):
         )
 
     @langkit_property(return_type=T.Symbol)
-    def free_fresh_symbol(prefix=T.Symbol, other=(T.DefTerm, No(T.DefTerm)),
+    def free_fresh_symbol(prefix=T.Symbol, other=(T.Term, No(T.Term)),
                           i=(T.Int, 0)):
         sym = Var(Self.concat_symbol_and_integer(prefix, i))
         return If(
@@ -853,9 +755,6 @@ class DefTerm(DependzNode):
             sym
         )
 
-
-@abstract
-class Term(DefTerm):
     @langkit_property(return_type=T.Term)
     def eval_case(matches=T.Term, then_case=T.Term, else_case=T.Term):
         constr = Var(matches.cast_or_raise(Identifier))
@@ -868,6 +767,8 @@ class Term(DefTerm):
             Self.cast(Apply).replace_left_most_term_with(then_case).eval,
 
             else_case._.extract_case_and_eval(Self)
+
+            # todo: handle arrows here?
         )
 
     @langkit_property(return_type=T.Term)
@@ -927,7 +828,59 @@ class Term(DefTerm):
                     ap.lhs.eval,
                     ab
                 ),
-            )._or(ab)
+            )._or(ab),
+            lambda ar=Arrow: ar
+        )
+
+    @langkit_property(public=True, return_type=T.Bool)
+    def equivalent_entities(other=T.Term.entity):
+        return Entity.node.equivalent(other.node)
+
+    @langkit_property(return_type=T.Bool, memoized=True)
+    def equivalent(other=T.Term):
+        return Self.match(
+            lambda id=Identifier: other.cast(Identifier).then(
+                lambda o: o.sym == id.sym
+            ),
+            lambda ap=Apply: other.cast(Apply).then(
+                lambda o: And(
+                    ap.lhs.equivalent(o.lhs),
+                    ap.rhs.equivalent(o.rhs)
+                )
+            ),
+            lambda ab=Abstraction: other.cast(Abstraction).then(
+                lambda o: ab.term.free_fresh_symbol("eq", o.term).then(
+                    lambda sym:
+                    ab.term.rename(ab.ident.sym, sym).equivalent(
+                        o.term.rename(o.ident.sym, sym)
+                    )
+                )
+            ),
+            lambda ar=Arrow: other.cast(Arrow).then(
+                lambda o: And(
+                    ar.lhs.equivalent(o.lhs),
+                    ar.rhs.equivalent(o.rhs),
+                    ar.binder.then(
+                        lambda b: o.binder.then(
+                            lambda ob: b.equivalent(ob),
+                            default_val=Not(ar.has_constraining_binder)
+                        ),
+                        default_val=Not(o.has_constraining_binder)
+                    )
+                )
+            )
+        )
+
+    @langkit_property(return_type=T.Term)
+    def substitute_all(substs=Substitution.array, idx=(T.Int, 0)):
+        return substs.at(idx).then(
+            lambda r: Self.substitute(
+                r.from_symbol,
+                r.to_term
+            ).substitute_all(
+                substs, idx + 1
+            ),
+            default_val=Self
         )
 
     @langkit_property(public=True, return_type=T.Term, memoized=True)
@@ -960,6 +913,11 @@ class Term(DefTerm):
                         ab.term.substitute(sym, val)
                     )
                 )
+            ),
+            lambda ar=Arrow: Self.make_arrow(
+                ar.lhs.substitute(sym, val),
+                ar.rhs.substitute(sym, val),
+                ar.binder._.substitute(sym, val)
             )
         )
 
@@ -978,6 +936,11 @@ class Term(DefTerm):
                     ab.ident.anti_substitute(val, sym)
                     .cast_or_raise(Identifier),
                     ab.term.anti_substitute(val, sym)
+                ),
+                lambda ar=Arrow: ar.make_arrow(
+                    ar.lhs.anti_substitute(val, sym),
+                    ar.rhs.anti_substitute(val, sym),
+                    ar.binder._.anti_substitute(val, sym)
                 )
             )
         )
@@ -996,9 +959,18 @@ class Term(DefTerm):
                 lambda ab=Abstraction: Or(
                     ab.ident.contains_term(t, True),
                     ab.term.contains_term(t, True)
+                ),
+                lambda ar=Arrow: Or(
+                    ar.lhs.contains_term(t, True),
+                    ar.rhs.contains_term(t, True),
+                    ar.binder._.contains_term(t, True)
                 )
             )
         )
+
+    @langkit_property(return_type=T.Term.entity)
+    def normalized_entities():
+        return Entity.node.normalize.as_entity
 
     @langkit_property(public=True, return_type=T.Term, memoized=True)
     def normalize():
@@ -1017,8 +989,23 @@ class Term(DefTerm):
                 lambda ab=Abstraction: ab.make_abstraction(
                     ab.ident,
                     ab.term.normalize
+                ),
+                lambda ar=Arrow: ar.make_arrow(
+                    ar.lhs.normalize,
+                    ar.rhs.normalize,
+                    ar.binder._.normalize
                 )
             )
+        )
+
+    @langkit_property(return_type=T.Term)
+    def rename_all(renamings=Renaming.array, idx=(T.Int, 0)):
+        return renamings.at(idx).then(
+            lambda r:
+            Self.rename(r.from_symbol, r.to_symbol).rename_all(
+                renamings, idx + 1
+            ),
+            default_val=Self
         )
 
     @langkit_property(return_type=T.Term, public=True, memoized=True)
@@ -1040,6 +1027,11 @@ class Term(DefTerm):
                     ab.ident,
                     ab.term.rename(old, by)
                 )
+            ),
+            lambda ar=Arrow: ar.make_arrow(
+                ar.lhs.rename(old, by),
+                ar.rhs.rename(old, by),
+                ar.binder._.rename(old, by)
             )
         )
 
@@ -1053,8 +1045,8 @@ class Term(DefTerm):
             lambda id=Identifier: If(
                 id.sym == sym,
                 Bind(orig, id.domain_var,
-                     conv_prop=DefTerm.normalized_domain,
-                     eq_prop=DefTerm.equivalent_entities),
+                     conv_prop=Term.normalized_entities,
+                     eq_prop=Term.equivalent_entities),
                 LogicTrue()
             ),
             lambda ap=Apply: And(
@@ -1065,6 +1057,14 @@ class Term(DefTerm):
                 ab.ident.sym == sym,
                 LogicTrue(),
                 ab.term.bind_occurrences(sym, orig)
+            ),
+            lambda ar=Arrow: And(
+                ar.lhs.bind_occurrences(sym, orig),
+                ar.rhs.bind_occurrences(sym, orig),
+                ar.binder.then(
+                    lambda b: b.bind_occurrences(sym, orig),
+                    default_val=LogicTrue()
+                )
             )
         )
 
@@ -1093,9 +1093,9 @@ class Term(DefTerm):
 
                     DomainEquation.new(
                         eq=Bind(
-                            Self.domain_var, intro.term.normalized_domain,
-                            conv_prop=DefTerm.normalized_domain,
-                            eq_prop=DefTerm.equivalent_entities
+                            Self.domain_var, intro.term.normalized_entities,
+                            conv_prop=Term.normalized_entities,
+                            eq_prop=Term.equivalent_entities
                         ),
                         templates=No(Identifier.array)
                     )
@@ -1116,10 +1116,10 @@ class Term(DefTerm):
                         rhs_eq.eq,
                         Bind(ap.lhs.domain_var, ap.rhs.domain_var,
                              conv_prop=Arrow.param,
-                             eq_prop=DefTerm.equivalent_entities),
+                             eq_prop=Term.equivalent_entities),
                         Bind(ap.lhs.domain_var, ap.domain_var,
                              conv_prop=Arrow.result,
-                             eq_prop=DefTerm.equivalent_entities)
+                             eq_prop=Term.equivalent_entities)
                     ),
                     templates=lhs_eq.templates.concat(rhs_eq.templates)
                 )
@@ -1134,13 +1134,47 @@ class Term(DefTerm):
                         ),
                         Bind(ab.domain_var, ab.ident.domain_var,
                              conv_prop=Arrow.param,
-                             eq_prop=DefTerm.equivalent_entities),
+                             eq_prop=Term.equivalent_entities),
                         Bind(ab.domain_var, ab.term.domain_var,
                              conv_prop=Arrow.result,
-                             eq_prop=DefTerm.equivalent_entities),
+                             eq_prop=Term.equivalent_entities),
                         term_eq.eq
                     ),
                     templates=term_eq.templates
+                )
+            ),
+
+            lambda ar=Arrow: Let(
+                lambda
+                lhs_eq=ar.lhs.domain_equation(bindings),
+                rhs_eq=ar.rhs.domain_equation(bindings),
+                binder_eq=ar.binder.then(
+                    lambda b: b.domain_equation(bindings),
+                    default_val=DomainEquation.new(
+                        eq=LogicTrue(),
+                        templates=No(Identifier.array)
+                    )
+                ):
+
+                DomainEquation.new(
+                    eq=And(
+                        lhs_eq.eq,
+                        rhs_eq.eq,
+                        binder_eq.eq,
+
+                        ar.binder.then(
+                            lambda b: Bind(
+                                b.domain_var, ar.lhs.normalize.as_bare_entity,
+                                eq_prop=Term.equivalent_entities
+                            ),
+                            default_val=LogicTrue()
+                        )
+                    ),
+                    templates=lhs_eq.templates.concat(
+                        rhs_eq.templates
+                    ).concat(
+                        binder_eq.templates
+                    )
                 )
             )
         ))
@@ -1149,7 +1183,7 @@ class Term(DefTerm):
             lambda b: DomainEquation.new(
                 eq=Bind(
                     Self.domain_var, b.domain_val.as_bare_entity,
-                    eq_prop=DefTerm.equivalent_entities
+                    eq_prop=Term.equivalent_entities
                 ) & result.eq,
                 templates=result.templates
             ),
@@ -1158,7 +1192,7 @@ class Term(DefTerm):
 
     @langkit_property(public=False, return_type=TypingsDescription,
                       activate_tracing=GLOBAL_ACTIVATE_TRACING)
-    def instantiate_templates(result_domain=T.DefTerm,
+    def instantiate_templates(result_domain=T.Term,
                               templates=Template.array,
                               reps=T.Substitution.array):
         def make_binding(domain):
@@ -1172,7 +1206,7 @@ class Term(DefTerm):
                 lambda
                 lhs_res=ap.lhs.instantiate_templates(
                     Self.make_arrow(
-                        No(T.DefTerm),
+                        No(T.Term),
                         result_domain
                     ),
                     templates,
@@ -1212,7 +1246,7 @@ class Term(DefTerm):
                             lambda b: UnifyQuery.new(
                                 first=b,
                                 second=rhs_res.bindings.at(0)
-                                .target.substitute_all(reps).dnorm
+                                .target.substitute_all(reps).normalize
                             ).singleton
                         )
                     ):
@@ -1263,6 +1297,41 @@ class Term(DefTerm):
                     ).singleton.concat(term_res.bindings),
                     equations=term_res.equations
                 )
+            ),
+
+            lambda ar=Arrow: Let(
+                lambda
+                lhs_res=ar.lhs.instantiate_templates(
+                    No(Term), templates, reps
+                ),
+                rhs_res=ar.rhs.instantiate_templates(
+                    No(Term), templates, reps
+                ),
+                binder_res=ar.binder.then(
+                    lambda b: b.instantiate_templates(
+                        ar.lhs, templates, reps
+                    ),
+                    default_val=TypingsDescription.new(
+                        bindings=No(Binding.array),
+                        equations=No(UnifyQuery.array)
+                    )
+                ):
+
+                TypingsDescription.new(
+                    bindings=make_binding(result_domain).singleton.concat(
+                        lhs_res.bindings
+                    ).concat(
+                        rhs_res.bindings
+                    ).concat(
+                        binder_res.bindings
+                    ),
+
+                    equations=lhs_res.equations.concat(
+                        rhs_res.equations
+                    ).concat(
+                        binder_res.equations
+                    )
+                )
             )
         ))
 
@@ -1279,9 +1348,9 @@ class Term(DefTerm):
             default_val=templated_result
         )
 
-    @langkit_property(return_type=T.DefTerm, public=True)
+    @langkit_property(return_type=T.Term, public=True)
     def domain_val():
-        return Self.domain_var.get_value._.node.cast_or_raise(DefTerm)
+        return Self.domain_var.get_value._.node.cast_or_raise(Term)
 
 
 @abstract
@@ -1383,10 +1452,10 @@ class SyntheticAbstraction(Abstraction):
     pass
 
 
-class Arrow(DefTerm):
+class Arrow(Term):
     binder = Field(type=Term)
-    lhs = Field(type=DefTerm)
-    rhs = Field(type=DefTerm)
+    lhs = Field(type=Term)
+    rhs = Field(type=Term)
 
     @langkit_property()
     def to_string():
@@ -1397,13 +1466,13 @@ class Arrow(DefTerm):
         ).concat(String(' -> ')).concat(Self.rhs.to_string)
          .concat(String(')')))
 
-    @langkit_property(return_type=DefTerm.entity)
+    @langkit_property(return_type=Term.entity)
     def param():
-        return Entity.lhs.normalized_domain
+        return Entity.lhs.normalized_entities
 
-    @langkit_property(return_type=DefTerm.entity)
+    @langkit_property(return_type=Term.entity)
     def result():
-        return Entity.rhs.normalized_domain
+        return Entity.rhs.normalized_entities
 
     @langkit_property(return_type=T.Bool)
     def has_constraining_binder():
@@ -1426,10 +1495,10 @@ class SyntheticArrow(Arrow):
 
 class Introduction(DependzNode):
     """
-    Identifer : DefTerm
+    Identifer : Term
     """
     ident = Field(type=SourceId)
-    term = Field(type=DefTerm)
+    term = Field(type=Term)
 
     @langkit_property(public=True, return_type=T.Definition.entity,
                       memoized=True)
@@ -1449,7 +1518,7 @@ class Introduction(DependzNode):
         )))
         return Template.new(
             origin=origin_term,
-            instance=Self.term.rename_all(renamings).dnorm,
+            instance=Self.term.rename_all(renamings).normalize,
             new_symbols=renamings.map(lambda r: r.to_symbol)
         )
 
@@ -1473,12 +1542,12 @@ class Definition(DependzNode):
     @langkit_property(public=True, return_type=T.Bool)
     def check_domains(tries=(T.Int, -1)):
         return Self.check_domains_internal(
-            Self.ident.intro.term.normalized_domain,
+            Self.ident.intro.term.normalized_entities,
             No(Binding.array), tries
         )
 
     @langkit_property(public=False, return_type=T.Bool)
-    def check_domains_internal(expected_domain=T.DefTerm.entity,
+    def check_domains_internal(expected_domain=T.Term.entity,
                                bindings=Binding.array, tries=T.Int):
         term_eq = Var(Self.term.domain_equation(bindings))
         domain_eq = Var(And(
@@ -1508,7 +1577,7 @@ class Definition(DependzNode):
                             lambda b: Binding.new(
                                 target=b.target,
                                 domain_val=
-                                b.domain_val.substitute_all(substs).dnorm
+                                b.domain_val.substitute_all(substs).normalize
                             )
                         ).filter(
                             lambda b: b.domain_val.free_symbols.all(

@@ -1,0 +1,7 @@
+
+function Bare_Term_Trace_Image
+  (Node : access Bare_Term_Type'Class) return String is
+begin
+    return Image (P_To_String (Node).Items);
+end Bare_Term_Trace_Image;
+

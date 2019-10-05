@@ -65,12 +65,11 @@ begin
       exit when C = No_Element;
       declare
          K : Mmz_Key := Memoization_Maps.Key (C);
-         N : Bare_Def_Term;
+         N : Bare_Term;
       begin
          case K.Property is
             when Mmz_Bare_Term_P_Normalize =>
-               N := Convert_Dependz_Node_To_Def_Term
-                 (Convert_Term_To_Dependz_Node (K.Items (1).As_Bare_Term));
+               N := K.Items (1).As_Bare_Term;
                Put_Line (Image (P_To_String (N).Items));
             when others =>
                null;

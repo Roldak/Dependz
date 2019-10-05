@@ -1,3 +1,5 @@
+Type : Type1
+
 Nat : Type
 Z : Nat
 S : Nat -> Nat
@@ -10,3 +12,9 @@ test_1 = \n. S n
 
 test_2 : Nat -> id Nat
 test_2 = test_1
+
+test_3 : Type
+test_3 = Nat -> Nat
+
+test_4 : test_3
+test_4 = \n. n

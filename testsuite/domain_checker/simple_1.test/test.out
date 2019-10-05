@@ -1,8 +1,16 @@
 test_1: Success
-  <Abstraction test.dep:9:10-9:17>: (Nat -> Nat)
-  <SourceId test.dep:9:11-9:12>: Nat
-  <Apply test.dep:9:14-9:17>: Nat
-  <SourceId test.dep:9:14-9:15>: (Nat -> Nat)
-  <SourceId test.dep:9:16-9:17>: Nat
+  <Abstraction test.dep:11:10-11:17>: (Nat -> Nat)
+  <SourceId test.dep:11:11-11:12>: Nat
+  <Apply test.dep:11:14-11:17>: Nat
+  <SourceId test.dep:11:14-11:15>: (Nat -> Nat)
+  <SourceId test.dep:11:16-11:17>: Nat
 test_2: Success
-  <SourceId test.dep:12:10-12:16>: (Nat -> Nat)
+  <SourceId test.dep:14:10-14:16>: (Nat -> Nat)
+test_3: Success
+  <Arrow test.dep:17:10-17:20>: Type
+  <SourceId test.dep:17:10-17:13>: Type
+  <SourceId test.dep:17:17-17:20>: Type
+test_4: Success
+  <Abstraction test.dep:20:10-20:15>: (Nat -> Nat)
+  <SourceId test.dep:20:11-20:12>: Nat
+  <SourceId test.dep:20:14-20:15>: Nat

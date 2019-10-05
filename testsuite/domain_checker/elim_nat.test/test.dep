@@ -37,3 +37,6 @@ test_elim_6 = elim_nat Z (\x. Nil)
 
 test_elim_7 : Vec (Vec Nat (S (S Z))) Z
 test_elim_7 = test_elim_6 (S (S (S Z)))
+
+test_elim_8 : n:Nat -> Nat -> Nat
+test_elim_8 = elim_nat (\x. x) (\n.\x. S (test_elim_8 n x))

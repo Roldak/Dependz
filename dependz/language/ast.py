@@ -1205,16 +1205,15 @@ class Term(DependzNode):
             return Let(
                 lambda
                 lhs_res=ap.lhs.instantiate_templates(
-                    Self.make_arrow(
-                        No(T.Term),
-                        result_domain
+                    result_domain.then(
+                        lambda r_dom: Self.make_arrow(No(T.Term), r_dom)
                     ),
                     templates,
                     reps
                 ): Let(
                     lambda
                     rhs_res=ap.rhs.instantiate_templates(
-                        lhs_res.bindings.at(0).domain_val.cast(Arrow).lhs,
+                        lhs_res.bindings.at(0).domain_val.cast(Arrow)._.lhs,
                         templates, reps
                     ):
 
@@ -1224,11 +1223,11 @@ class Term(DependzNode):
 
         templated_result = Var(Self.match(
             lambda id=Identifier: TypingsDescription.new(
-                bindings=make_binding(
-                    templates.find(lambda t: t.origin == id).then(
-                        lambda t: t.instance,
-                        default_val=id.domain_val._or(result_domain)
-                    )
+                bindings=templates.find(lambda t: t.origin == id).then(
+                    lambda t: t.instance,
+                    default_val=id.domain_val._or(result_domain)
+                ).then(
+                    lambda dom: make_binding(dom)
                 ).singleton,
                 equations=No(UnifyQuery.array)
             ),
@@ -1236,13 +1235,15 @@ class Term(DependzNode):
             lambda ap=Apply: rec_apply(
                 ap,
                 lambda lhs_res, rhs_res: Let(
-                    lambda qs=UnifyQuery.new(
-                        first=lhs_res.bindings.at(0)
-                        .domain_val.cast(Arrow).lhs,
-                        second=rhs_res.bindings.at(0).domain_val
-                    ).singleton.concat(
+                    lambda qs=rhs_res.bindings.at(0).domain_val.then(
+                        lambda rhs_dom: UnifyQuery.new(
+                            first=lhs_res.bindings.at(0)
+                            .domain_val.cast(Arrow).lhs,
+                            second=rhs_dom
+                        ).singleton
+                    ).concat(
                         lhs_res.bindings.at(0)
-                        .domain_val.cast(Arrow).binder.then(
+                        .domain_val.cast(Arrow)._.binder.then(
                             lambda b: UnifyQuery.new(
                                 first=b,
                                 second=rhs_res.bindings.at(0)
@@ -1273,11 +1274,11 @@ class Term(DependzNode):
             lambda ab=Abstraction: Let(
                 lambda
                 term_res=ab.term.instantiate_templates(
-                    result_domain._.cast(Arrow).rhs,
+                    result_domain._.cast(Arrow)._.rhs,
                     templates,
                     reps.filter(
                         lambda s: s.from_symbol != ab.ident.sym
-                    ).concat(result_domain._.cast(Arrow).binder.then(
+                    ).concat(result_domain._.cast(Arrow)._.binder.then(
                         lambda b: Substitution.new(
                             from_symbol=ab.ident.sym,
                             to_term=b
@@ -1286,15 +1287,22 @@ class Term(DependzNode):
                 ):
 
                 TypingsDescription.new(
-                    bindings=make_binding(
-                        Self.make_arrow(
-                            ab.ident.domain_val._or(
-                                result_domain._.cast(Arrow).lhs
-                            ),
-                            term_res.bindings.at(0).domain_val,
-                            result_domain._.cast(Arrow).binder
+                    bindings=ab.ident.domain_val._or(
+                        result_domain.cast(Arrow)._.lhs
+                    ).then(
+                        lambda lhs_dom:
+
+                        term_res.bindings.at(0).domain_val.then(
+                            lambda rhs_dom: make_binding(
+                                Self.make_arrow(
+                                    lhs_dom,
+                                    rhs_dom,
+                                    result_domain.cast(Arrow)._.binder
+                                )
+                            )
                         )
                     ).singleton.concat(term_res.bindings),
+
                     equations=term_res.equations
                 )
             ),
@@ -1318,7 +1326,7 @@ class Term(DependzNode):
                 ):
 
                 TypingsDescription.new(
-                    bindings=make_binding(result_domain).singleton.concat(
+                    bindings=No(Binding).singleton.concat(
                         lhs_res.bindings
                     ).concat(
                         rhs_res.bindings
@@ -1336,13 +1344,21 @@ class Term(DependzNode):
         ))
 
         return Self.domain_val.then(
-            lambda expected_dom: Let(
-                lambda q=UnifyQuery.new(
-                    first=templated_result.bindings.at(0).domain_val,
-                    second=expected_dom
-                ): TypingsDescription.new(
-                    bindings=templated_result.bindings,
-                    equations=q.singleton.concat(templated_result.equations)
+            lambda expected_dom:
+
+            templated_result.bindings.at(0).domain_val.then(
+                lambda found_dom: Let(
+                    lambda q=UnifyQuery.new(
+                        first=found_dom,
+                        second=expected_dom
+                    ):
+
+                    TypingsDescription.new(
+                        bindings=templated_result.bindings,
+                        equations=q.singleton.concat(
+                            templated_result.equations
+                        )
+                    )
                 )
             ),
             default_val=templated_result
@@ -1567,6 +1583,19 @@ class Definition(DependzNode):
                     expected_domain.node,
                     instances,
                     No(Substitution.array)
+                ).then(
+                    lambda result: TypingsDescription.new(
+                        bindings=result.bindings.filter(
+                            lambda b: Not(
+                                b.target.is_null | b.domain_val.is_null
+                            )
+                        ),
+                        equations=result.equations.filter(
+                            lambda eq: Not(
+                                eq.first.is_null | eq.second.is_null
+                            )
+                        )
+                    )
                 ).then(lambda result: Self.check_domains_internal(
                     expected_domain,
                     Let(

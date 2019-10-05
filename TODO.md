@@ -31,15 +31,3 @@
   (and not `x$XX:Nat -> Nat`)
 
 - Implement totality checking.
-
-- Remove DefTerm class. Turn Arrow into a Term.
-  Indeed, a huge limitation currently is that a function cannot
-  return an arrow type, and arrow types cannot be inferred. This
-  means that it is impossible to typecheck:
-  ```
-  add : Nat -> Nat -> Nat
-  add = elim_nat (\x. x) (\k.\x. S (add k x))
-  ```
-  because the signature of `elim_nat` is
-  `P Z -> (k:Nat -> P (S k)) -> x:Nat -> P x` and so in that case
-  we would require `P` to be `\x. Nat -> Nat`.

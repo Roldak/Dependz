@@ -64,3 +64,21 @@ test_elim_7: Success
   <Apply test.dep:39:34-39:37>: Nat
   <SourceId test.dep:39:34-39:35>: (Nat -> Nat)
   <SourceId test.dep:39:36-39:37>: Nat
+test_elim_8: Success
+  <Apply test.dep:42:15-42:60>: (n:Nat -> (Nat -> Nat))
+  <Apply test.dep:42:15-42:31>: ((k:Nat -> (Nat -> Nat)) -> (n:Nat -> (Nat -> Nat)))
+  <SourceId test.dep:42:15-42:23>: ((Nat -> Nat) -> ((k:Nat -> (Nat -> Nat)) -> (n:Nat -> (Nat -> Nat))))
+  <Abstraction test.dep:42:25-42:30>: (Nat -> Nat)
+  <SourceId test.dep:42:26-42:27>: Nat
+  <SourceId test.dep:42:29-42:30>: Nat
+  <Abstraction test.dep:42:33-42:59>: (k:Nat -> (Nat -> Nat))
+  <SourceId test.dep:42:34-42:35>: Nat
+  <Abstraction test.dep:42:36-42:59>: (Nat -> Nat)
+  <SourceId test.dep:42:37-42:38>: Nat
+  <Apply test.dep:42:40-42:59>: Nat
+  <SourceId test.dep:42:40-42:41>: (Nat -> Nat)
+  <Apply test.dep:42:43-42:58>: Nat
+  <Apply test.dep:42:43-42:56>: (Nat -> Nat)
+  <SourceId test.dep:42:43-42:54>: (k:Nat -> (Nat -> Nat))
+  <SourceId test.dep:42:55-42:56>: Nat
+  <SourceId test.dep:42:57-42:58>: Nat

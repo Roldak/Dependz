@@ -1,0 +1,8 @@
+test_1 : Type
+test_1 = Nat -> Nat
+
+test_2 : Nat
+test_2 = foo (Nat -> Nat)
+
+test_3 : Nat
+test_3 = Foo a b -> Bar \x. x -> Baz

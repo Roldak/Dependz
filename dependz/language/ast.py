@@ -1548,12 +1548,16 @@ class Arrow(Term):
 
     @langkit_property()
     def to_string():
+        lhs_str = Var(Self.lhs._.to_string)
+        rhs_str = Var(Self.rhs.to_string)
         return String('(').concat(Self.binder.then(
-            lambda b: b.to_string.concat(String(':'))
-            .concat(Self.lhs._.to_string),
-            default_val=Self.lhs._.to_string
-        ).concat(String(' -> ')).concat(Self.rhs.to_string)
-         .concat(String(')')))
+            lambda b: If(
+                Self.has_constraining_binder,
+                b.to_string.concat(String(':')).concat(lhs_str),
+                lhs_str
+            ),
+            default_val=lhs_str
+        ).concat(String(' -> ')).concat(rhs_str).concat(String(')')))
 
     @langkit_property(return_type=Term.entity)
     def param():

@@ -55,6 +55,7 @@ class UnifyQuery(Struct):
 class TypingsDescription(Struct):
     bindings = UserField(type=T.Binding.array)
     equations = UserField(type=T.UnifyQuery.array)
+    new_symbols = UserField(type=T.Symbol.array)
 
 
 class UnificationContext(Struct):
@@ -1195,6 +1196,65 @@ class Term(DependzNode):
     def instantiate_templates(result_domain=T.Term,
                               templates=Template.array,
                               reps=T.Substitution.array):
+        must_synthesize_arrow = Var(
+            Self.cast(Abstraction).then(
+                lambda ab: result_domain.cast(Arrow).then(
+                    lambda ar: False,
+                    default_val=True
+                ),
+                default_val=False
+            )
+        )
+        actual_result_domain = Var(If(
+            must_synthesize_arrow,
+            Let(
+                lambda
+                lhs_sym=Self.unique_fresh_symbol("lhs"),
+                rhs_sym=Self.unique_fresh_symbol("rhs"),
+                binder_sym=Self.unique_fresh_symbol("binder"):
+
+                Self.make_arrow(
+                    Self.make_ident(lhs_sym),
+                    Self.make_ident(rhs_sym),
+                    Self.make_ident(binder_sym)
+                )
+            ),
+            result_domain
+        ))
+        instantiation = Var(Self.instantiate_templates_impl(
+            actual_result_domain,
+            templates,
+            reps
+        ))
+        return If(
+            must_synthesize_arrow,
+            Let(
+                lambda ar=actual_result_domain.cast_or_raise(Arrow):
+
+                TypingsDescription.new(
+                    bindings=instantiation.bindings,
+                    equations=instantiation.equations.concat(
+                        UnifyQuery.new(
+                            first=ar,
+                            second=result_domain
+                        ).singleton
+                    ),
+                    new_symbols=instantiation.new_symbols.concat(
+                        ArrayLiteral([
+                            ar.lhs.cast(Identifier).sym,
+                            ar.rhs.cast(Identifier).sym,
+                            ar.binder.cast(Identifier).sym
+                        ])
+                    )
+                )
+            ),
+            instantiation
+        )
+
+    @langkit_property(public=False, return_type=TypingsDescription)
+    def instantiate_templates_impl(result_domain=T.Term,
+                                   templates=Template.array,
+                                   reps=T.Substitution.array):
         def make_binding(domain):
             return Binding.new(
                 target=Self,
@@ -1229,7 +1289,10 @@ class Term(DependzNode):
                 ).then(
                     lambda dom: make_binding(dom)
                 ).singleton,
-                equations=No(UnifyQuery.array)
+
+                equations=No(UnifyQuery.array),
+
+                new_symbols=No(Symbol.array)
             ),
 
             lambda ap=Apply: rec_apply(
@@ -1266,6 +1329,10 @@ class Term(DependzNode):
                             rhs_res.equations
                         ).concat(
                             qs
+                        ),
+
+                        new_symbols=lhs_res.new_symbols.concat(
+                            rhs_res.new_symbols
                         )
                     )
                 )
@@ -1274,11 +1341,11 @@ class Term(DependzNode):
             lambda ab=Abstraction: Let(
                 lambda
                 term_res=ab.term.instantiate_templates(
-                    result_domain._.cast(Arrow)._.rhs,
+                    result_domain.cast(Arrow)._.rhs,
                     templates,
                     reps.filter(
                         lambda s: s.from_symbol != ab.ident.sym
-                    ).concat(result_domain._.cast(Arrow)._.binder.then(
+                    ).concat(result_domain.cast(Arrow)._.binder.then(
                         lambda b: Substitution.new(
                             from_symbol=ab.ident.sym,
                             to_term=b
@@ -1303,7 +1370,9 @@ class Term(DependzNode):
                         )
                     ).singleton.concat(term_res.bindings),
 
-                    equations=term_res.equations
+                    equations=term_res.equations,
+
+                    new_symbols=term_res.new_symbols
                 )
             ),
 
@@ -1321,7 +1390,8 @@ class Term(DependzNode):
                     ),
                     default_val=TypingsDescription.new(
                         bindings=No(Binding.array),
-                        equations=No(UnifyQuery.array)
+                        equations=No(UnifyQuery.array),
+                        new_symbols=No(Symbol.array)
                     )
                 ):
 
@@ -1338,7 +1408,9 @@ class Term(DependzNode):
                         rhs_res.equations
                     ).concat(
                         binder_res.equations
-                    )
+                    ),
+
+                    new_symbols=lhs_res.new_symbols.concat(rhs_res.new_symbols)
                 )
             )
         ))
@@ -1357,7 +1429,8 @@ class Term(DependzNode):
                         bindings=templated_result.bindings,
                         equations=q.singleton.concat(
                             templated_result.equations
-                        )
+                        ),
+                        new_symbols=templated_result.new_symbols
                     )
                 )
             ),
@@ -1594,14 +1667,18 @@ class Definition(DependzNode):
                             lambda eq: Not(
                                 eq.first.is_null | eq.second.is_null
                             )
-                        )
+                        ),
                     )
                 ).then(lambda result: Self.check_domains_internal(
                     expected_domain,
                     Let(
                         lambda substs=Self.unify_all(
                             result.equations,
-                            instances.mapcat(lambda i: i.instance.free_symbols)
+                            instances.mapcat(
+                                lambda i: i.instance.free_symbols
+                            ).concat(
+                                result.new_symbols
+                            )
                         ): result.bindings.map(
                             lambda b: Binding.new(
                                 target=b.target,

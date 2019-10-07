@@ -14,3 +14,9 @@ test_4: Success
   <Abstraction test.dep:20:10-20:15>: (Nat -> Nat)
   <SourceId test.dep:20:11-20:12>: Nat
   <SourceId test.dep:20:14-20:15>: Nat
+test_5: Success
+  <Apply test.dep:23:10-23:25>: Type
+  <SourceId test.dep:23:10-23:12>: (Type -> Type)
+  <Arrow test.dep:23:14-23:24>: Type
+  <SourceId test.dep:23:14-23:17>: Type
+  <SourceId test.dep:23:21-23:24>: Type

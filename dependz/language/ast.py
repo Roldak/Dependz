@@ -1387,16 +1387,14 @@ class Term(DependzNode):
                 binder_res=ar.binder.then(
                     lambda b: b.instantiate_templates(
                         ar.lhs, templates, reps
-                    ),
-                    default_val=TypingsDescription.new(
-                        bindings=No(Binding.array),
-                        equations=No(UnifyQuery.array),
-                        new_symbols=No(Symbol.array)
                     )
-                ):
+                ),
+                new_sym=Self.unique_fresh_symbol("arrow"):
 
                 TypingsDescription.new(
-                    bindings=No(Binding).singleton.concat(
+                    bindings=make_binding(
+                        Self.make_ident(new_sym)
+                    ).singleton.concat(
                         lhs_res.bindings
                     ).concat(
                         rhs_res.bindings
@@ -1410,7 +1408,11 @@ class Term(DependzNode):
                         binder_res.equations
                     ),
 
-                    new_symbols=lhs_res.new_symbols.concat(rhs_res.new_symbols)
+                    new_symbols=new_sym.singleton.concat(
+                        lhs_res.new_symbols
+                    ).concat(
+                        rhs_res.new_symbols
+                    )
                 )
             )
         ))
@@ -1660,19 +1662,6 @@ class Definition(DependzNode):
                     expected_domain.node,
                     instances,
                     No(Substitution.array)
-                ).then(
-                    lambda result: TypingsDescription.new(
-                        bindings=result.bindings.filter(
-                            lambda b: Not(
-                                b.target.is_null | b.domain_val.is_null
-                            )
-                        ),
-                        equations=result.equations.filter(
-                            lambda eq: Not(
-                                eq.first.is_null | eq.second.is_null
-                            )
-                        ),
-                    )
                 ).then(lambda result: Self.check_domains_internal(
                     expected_domain,
                     Let(

@@ -18,3 +18,6 @@ test_3 = Nat -> Nat
 
 test_4 : test_3
 test_4 = \n. n
+
+test_5 : Type
+test_5 = id (Nat -> Nat)

@@ -1169,7 +1169,16 @@ class Term(DependzNode):
                                 eq_prop=Term.equivalent_entities
                             ),
                             default_val=LogicTrue()
-                        )
+                        ),
+
+                        Or(
+                            Bind(ar.domain_var, ar.lhs.domain_var,
+                                 eq_prop=Term.equivalent_entities),
+                            Bind(ar.domain_var, ar.rhs.domain_var,
+                                 eq_prop=Term.equivalent_entities)
+                        ),
+                        Predicate(Term.is_highest_ranked_term, ar.domain_var,
+                                  ar.lhs.domain_var, ar.rhs.domain_var)
                     ),
                     templates=lhs_eq.templates.concat(
                         rhs_eq.templates
@@ -1442,6 +1451,25 @@ class Term(DependzNode):
     @langkit_property(return_type=T.Term, public=True)
     def domain_val():
         return Self.domain_var.get_value._.node.cast_or_raise(Term)
+
+    @langkit_property(return_type=T.Bool)
+    def is_highest_ranked_term(fst=DependzNode.entity, snd=DependzNode.entity):
+        t1 = Var(fst.cast_or_raise(Term).node)
+        t2 = Var(snd.cast_or_raise(Term).node)
+        return Self.equivalent(t1.self_or_higher_ranked_term(t2))
+
+    @langkit_property(return_type=T.Term, memoized=True)
+    def self_or_higher_ranked_term(other=T.Term):
+        self_chain = Var(Self.domain_chain)
+        other_chain = Var(other.domain_chain)
+        first_common = Var(self_chain.find(lambda d: other_chain.contains(d)))
+        return first_common._or(PropertyError(Term, "Terms are incompatible"))
+
+    @langkit_property(return_type=T.Term.array, memoized=True)
+    def domain_chain():
+        id = Var(Self.cast_or_raise(Identifier))
+        domain = Var(id.intro._.term)
+        return Self.singleton.concat(domain._.domain_chain)
 
 
 @abstract

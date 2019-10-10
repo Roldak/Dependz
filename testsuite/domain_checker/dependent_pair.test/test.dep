@@ -7,12 +7,6 @@ Vec : Type -> Nat -> Type
 Nil : Vec t Z
 Cons : t -> Vec t n -> Vec t (S n)
 
-One : Nat
-One = S Z
-
-Two : Nat
-Two = S One
-
 Pair : a -> b -> Type
 MkPair : a -> b -> Pair a b
 
@@ -27,3 +21,16 @@ test_dpair = DPMake (S Z) (Cons Z Nil)
 
 test_dpair_2 : DPair Type (\t. Vec t (S Z))
 test_dpair_2 = DPMake Nat (Cons Z Nil)
+
+Bool  : Type
+True  : Bool
+False : Bool
+
+Eq : t -> t -> Type
+Refl : Eq x x
+
+not : Bool -> Bool
+not = match (case True False (case False True))
+
+test_dpair_3 : b:Bool -> DPair Bool (\n. Eq n (not b))
+test_dpair_3 = \b. DPMake (not b) Refl

@@ -1,30 +1,40 @@
 test_pair: Success
-  <Apply test.dep:20:13-20:27>: ((Pair Nat) Nat)
-  <Apply test.dep:20:13-20:21>: (Nat -> ((Pair Nat) Nat))
-  <SourceId test.dep:20:13-20:19>: (Nat -> (Nat -> ((Pair Nat) Nat)))
-  <SourceId test.dep:20:20-20:21>: Nat
-  <Apply test.dep:20:23-20:26>: Nat
-  <SourceId test.dep:20:23-20:24>: (Nat -> Nat)
-  <SourceId test.dep:20:25-20:26>: Nat
+  <Apply test.dep:14:13-14:27>: ((Pair Nat) Nat)
+  <Apply test.dep:14:13-14:21>: (Nat -> ((Pair Nat) Nat))
+  <SourceId test.dep:14:13-14:19>: (Nat -> (Nat -> ((Pair Nat) Nat)))
+  <SourceId test.dep:14:20-14:21>: Nat
+  <Apply test.dep:14:23-14:26>: Nat
+  <SourceId test.dep:14:23-14:24>: (Nat -> Nat)
+  <SourceId test.dep:14:25-14:26>: Nat
 test_dpair: Success
-  <Apply test.dep:26:14-26:39>: ((DPair Nat) (Vec Nat))
-  <Apply test.dep:26:14-26:26>: (((Vec Nat) (S Z)) -> ((DPair Nat) (Vec Nat)))
-  <SourceId test.dep:26:14-26:20>: ((S Z):Nat -> (((Vec Nat) (S Z)) -> ((DPair Nat) (Vec Nat))))
-  <Apply test.dep:26:22-26:25>: Nat
-  <SourceId test.dep:26:22-26:23>: (Nat -> Nat)
-  <SourceId test.dep:26:24-26:25>: Nat
-  <Apply test.dep:26:28-26:38>: ((Vec Nat) (S Z))
-  <Apply test.dep:26:28-26:34>: (((Vec Nat) Z) -> ((Vec Nat) (S Z)))
-  <SourceId test.dep:26:28-26:32>: (Nat -> (((Vec Nat) Z) -> ((Vec Nat) (S Z))))
-  <SourceId test.dep:26:33-26:34>: Nat
-  <SourceId test.dep:26:35-26:38>: ((Vec Nat) Z)
+  <Apply test.dep:20:14-20:39>: ((DPair Nat) (Vec Nat))
+  <Apply test.dep:20:14-20:26>: (((Vec Nat) (S Z)) -> ((DPair Nat) (Vec Nat)))
+  <SourceId test.dep:20:14-20:20>: ((S Z):Nat -> (((Vec Nat) (S Z)) -> ((DPair Nat) (Vec Nat))))
+  <Apply test.dep:20:22-20:25>: Nat
+  <SourceId test.dep:20:22-20:23>: (Nat -> Nat)
+  <SourceId test.dep:20:24-20:25>: Nat
+  <Apply test.dep:20:28-20:38>: ((Vec Nat) (S Z))
+  <Apply test.dep:20:28-20:34>: (((Vec Nat) Z) -> ((Vec Nat) (S Z)))
+  <SourceId test.dep:20:28-20:32>: (Nat -> (((Vec Nat) Z) -> ((Vec Nat) (S Z))))
+  <SourceId test.dep:20:33-20:34>: Nat
+  <SourceId test.dep:20:35-20:38>: ((Vec Nat) Z)
 test_dpair_2: Success
-  <Apply test.dep:29:16-29:39>: ((DPair Type) (\t. ((Vec t) (S Z))))
-  <Apply test.dep:29:16-29:26>: (((Vec Nat) (S Z)) -> ((DPair Type) (\t. ((Vec t) (S Z)))))
-  <SourceId test.dep:29:16-29:22>: (Nat:Type -> (((Vec Nat) (S Z)) -> ((DPair Type) (\t. ((Vec t) (S Z))))))
-  <SourceId test.dep:29:23-29:26>: Type
-  <Apply test.dep:29:28-29:38>: ((Vec Nat) (S Z))
-  <Apply test.dep:29:28-29:34>: (((Vec Nat) Z) -> ((Vec Nat) (S Z)))
-  <SourceId test.dep:29:28-29:32>: (Nat -> (((Vec Nat) Z) -> ((Vec Nat) (S Z))))
-  <SourceId test.dep:29:33-29:34>: Nat
-  <SourceId test.dep:29:35-29:38>: ((Vec Nat) Z)
+  <Apply test.dep:23:16-23:39>: ((DPair Type) (\t. ((Vec t) (S Z))))
+  <Apply test.dep:23:16-23:26>: (((Vec Nat) (S Z)) -> ((DPair Type) (\t. ((Vec t) (S Z)))))
+  <SourceId test.dep:23:16-23:22>: (Nat:Type -> (((Vec Nat) (S Z)) -> ((DPair Type) (\t. ((Vec t) (S Z))))))
+  <SourceId test.dep:23:23-23:26>: Type
+  <Apply test.dep:23:28-23:38>: ((Vec Nat) (S Z))
+  <Apply test.dep:23:28-23:34>: (((Vec Nat) Z) -> ((Vec Nat) (S Z)))
+  <SourceId test.dep:23:28-23:32>: (Nat -> (((Vec Nat) Z) -> ((Vec Nat) (S Z))))
+  <SourceId test.dep:23:33-23:34>: Nat
+  <SourceId test.dep:23:35-23:38>: ((Vec Nat) Z)
+test_dpair_3: Success
+  <Abstraction test.dep:36:16-36:39>: (b:Bool -> ((DPair Bool) (\n. ((Eq n) ((match (((case True) False) ((case False) True))) b)))))
+  <SourceId test.dep:36:17-36:18>: Bool
+  <Apply test.dep:36:20-36:39>: ((DPair Bool) (\n. ((Eq n) ((match (((case True) False) ((case False) True))) b))))
+  <Apply test.dep:36:20-36:34>: (((Eq ((match (((case True) False) ((case False) True))) b)) ((match (((case True) False) ((case False) True))) b)) -> ((DPair Bool) (\n. ((Eq n) ((match (((case True) False) ((case False) True))) b)))))
+  <SourceId test.dep:36:20-36:26>: (((match (((case True) False) ((case False) True))) b):Bool -> (((Eq ((match (((case True) False) ((case False) True))) b)) ((match (((case True) False) ((case False) True))) b)) -> ((DPair Bool) (\n. ((Eq n) ((match (((case True) False) ((case False) True))) b))))))
+  <Apply test.dep:36:28-36:33>: Bool
+  <SourceId test.dep:36:28-36:31>: (Bool -> Bool)
+  <SourceId test.dep:36:32-36:33>: Bool
+  <SourceId test.dep:36:35-36:39>: ((Eq ((match (((case True) False) ((case False) True))) b)) ((match (((case True) False) ((case False) True))) b))

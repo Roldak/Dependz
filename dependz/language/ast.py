@@ -632,9 +632,43 @@ class Term(DependzNode):
             lambda x: x
         )
 
+    @langkit_property(return_type=T.Template.array)
+    def constructors_impl(generics=T.Symbol.array):
+        constrs = Var(Self.unit.root.cast(Program).all_constructors.map(
+            lambda c: c.as_template(c.ident)
+        ))
+
+        return constrs.mapcat(
+            lambda c: Let(
+                lambda inst=c.instance.final_result_domain:
+
+                Try(
+                    Let(
+                        lambda substs=inst.unify(
+                            Self,
+                            c.new_symbols.concat(generics),
+                            allow_incomplete=True
+                        ):
+
+                        Template.new(
+                            origin=c.origin,
+                            instance=c.instance.substitute_all(substs),
+                            new_symbols=c.new_symbols.filter(
+                                lambda sym: Not(substs.any(
+                                    lambda subst: subst.from_symbol == sym
+                                ))
+                            )
+                        ).singleton
+                    ),
+                    No(Template.array)
+                )
+            )
+        )
+
     @langkit_property(public=True, return_type=T.Term.entity.array)
     def constructors():
         normed = Var(Self.normalize)
+        generics = Var(normed.free_symbols)
 
         ignore(Var(Cond(
             normed.is_a(Arrow),
@@ -646,29 +680,7 @@ class Term(DependzNode):
             True
         )))
 
-        generics = Var(normed.free_symbols)
-        constrs = Var(normed.unit.root.cast(Program).all_constructors.map(
-            lambda c: c.as_template(c.ident)
-        ))
-
-        return constrs.filter(
-            lambda c: Let(
-                lambda inst=c.instance.final_result_domain:
-
-                Try(
-                    Let(
-                        lambda substs=inst.unify(
-                            normed,
-                            c.new_symbols.concat(generics),
-                            allow_incomplete=True
-                        ):
-
-                        True
-                    ),
-                    False
-                )
-            )
-        ).map(
+        return normed.constructors_impl(generics).map(
             lambda c: c.origin.as_bare_entity
         )
 

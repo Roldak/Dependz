@@ -1,0 +1,10 @@
+Type : Type
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+test_cst : Nat
+test_cst = hole
+
+test_fun_1 : Nat -> Nat
+test_fun_1 = hole

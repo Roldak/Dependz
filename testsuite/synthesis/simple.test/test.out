@@ -1,0 +1,4 @@
+test_cst: Success
+  test_cst = Z
+test_fun_1: Success
+  test_fun_1 = (\x. Z)

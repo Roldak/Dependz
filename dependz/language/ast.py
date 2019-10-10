@@ -632,7 +632,15 @@ class Term(DependzNode):
             lambda x: x
         )
 
-    @langkit_property(return_type=T.Template.array)
+    @langkit_property(return_type=T.Int, memoized=True)
+    def param_count():
+        return Self.normalize.match(
+            lambda ar=Arrow: ar.rhs.param_count + 1,
+            lambda _: 0
+        )
+
+    @langkit_property(return_type=T.Template.array,
+                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def constructors_impl(generics=T.Symbol.array):
         constrs = Var(Self.unit.root.cast(Program).all_constructors.map(
             lambda c: c.as_template(c.ident)
@@ -665,6 +673,26 @@ class Term(DependzNode):
             )
         )
 
+    @langkit_property(return_type=T.Template.array.array)
+    def grouped_constructors_impl(constrs=T.Template.array, i=T.Int):
+        filtered = Var(constrs.filter(
+            lambda c: c.instance.param_count == i
+        ))
+        not_filtered = Var(constrs.filter(
+            lambda c: c.instance.param_count != i
+        ))
+        return filtered.singleton.concat(
+            not_filtered.then(
+                lambda rest: Self.grouped_constructors_impl(rest, i + 1)
+            )
+        )
+
+    @langkit_property(return_type=T.Template.array.array)
+    def grouped_constructors(generics=T.Symbol.array):
+        return Self.grouped_constructors_impl(
+            Self.constructors_impl(generics), 0
+        )
+
     @langkit_property(public=True, return_type=T.Term.entity.array)
     def constructors():
         normed = Var(Self.normalize)
@@ -682,6 +710,91 @@ class Term(DependzNode):
 
         return normed.constructors_impl(generics).map(
             lambda c: c.origin.as_bare_entity
+        )
+
+    @langkit_property(return_type=T.Term)
+    def synthesize_abstraction():
+        ar = Var(Self.cast_or_raise(Arrow))
+        sym = Var(Self.free_fresh_symbol(ar.binder._.cast(Identifier).then(
+            lambda id: id.sym,
+            default_val="x"
+        )))
+        id = Var(Self.make_ident(sym))
+
+        return Self.make_abstraction(
+            id,
+            ar.binder.then(
+                lambda b: b.cast(Identifier).then(
+                    lambda i: i.intro.then(
+                        lambda _: ar.rhs,
+                        default_val=ar.rhs.substitute(i.sym, id)
+                    ),
+                    default_val=PropertyError(
+                        Term, "Non-identifier binders are not handled yet."
+                    )
+                ),
+                default_val=ar.rhs
+            ).synthesize
+        )
+
+    @langkit_property(return_type=T.Term,
+                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
+    def synthesize_apply_arrow(built=T.Term, ar=T.Arrow,
+                               new_symbols=T.Symbol.array):
+        hole_sym = Var(Self.free_fresh_symbol("hole"))
+        hole_id = Var(Self.make_ident(hole_sym))
+
+        rhs_type = ar.binder.then(
+            lambda b: b.cast(Identifier).then(
+                lambda id: ar.rhs.substitute(id.sym, hole_id),
+                default_val=PropertyError(
+                    Term, "Non-identifier binders are not handled yet."
+                )
+            ),
+            default_val=ar.rhs
+        )
+
+        rec = Var(Self.synthesize_apply(
+            Self.make_apply(
+                built, hole_id
+            ),
+            rhs_type,
+            new_symbols.concat(hole_sym.singleton)
+        ))
+
+        return rec
+
+    @langkit_property(return_type=T.Term)
+    def synthesize_apply(built=T.Term, callee_type=T.Term,
+                         new_symbols=T.Symbol.array):
+        return callee_type.match(
+            lambda ar=Arrow:
+            Self.synthesize_apply_arrow(built, ar, new_symbols),
+
+            lambda _: built
+        )
+
+    @langkit_property(return_type=T.Term)
+    def synthesize_constructor(generics=(T.Symbol.array)):
+        all_constrs = Var(Self.grouped_constructors(generics))
+        return all_constrs.mapcat(
+            lambda cstrs: cstrs.mapcat(
+                lambda c: Self.synthesize_apply(
+                    c.origin,
+                    c.instance,
+                    c.new_symbols
+                ).singleton
+            )
+        ).at(0)
+
+    @langkit_property(public=True, return_type=T.Term)
+    def synthesize():
+        return Self.normalize.match(
+            lambda ar=Arrow: ar.synthesize_abstraction,
+            lambda ab=Abstraction: PropertyError(
+                Term, "Abstractions are not valid domains"
+            ),
+            lambda other: other.synthesize_constructor(No(Symbol.array))
         )
 
     @langkit_property(public=True, return_type=T.Symbol.array, memoized=True)

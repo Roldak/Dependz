@@ -8,3 +8,9 @@ test_cst = hole
 
 test_fun_1 : Nat -> Nat
 test_fun_1 = hole
+
+WrappedNat : Type
+MkWrappedNat : Nat -> WrappedNat
+
+test_fun_2 : Nat -> WrappedNat
+test_fun_2 = hole

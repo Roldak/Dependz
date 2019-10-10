@@ -68,6 +68,16 @@ class HigherOrderUnificationContext(Struct):
     res = UserField(type=T.Term)
 
 
+class ConstrainedTerm(Struct):
+    term = UserField(type=T.Term)
+    constraints = UserField(type=Substitution.array)
+
+
+class Constructor(Struct):
+    template = UserField(type=Template)
+    substs = UserField(type=Substitution.array)
+
+
 unification_context = DynamicVariable(
     "unification_context", type=UnificationContext
 )
@@ -639,7 +649,7 @@ class Term(DependzNode):
             lambda _: 0
         )
 
-    @langkit_property(return_type=T.Template.array,
+    @langkit_property(return_type=T.Constructor.array,
                       activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def constructors_impl(generics=T.Symbol.array):
         constrs = Var(Self.unit.root.cast(Program).all_constructors.map(
@@ -658,28 +668,31 @@ class Term(DependzNode):
                             allow_incomplete=True
                         ):
 
-                        Template.new(
-                            origin=c.origin,
-                            instance=c.instance.substitute_all(substs),
-                            new_symbols=c.new_symbols.filter(
-                                lambda sym: Not(substs.any(
-                                    lambda subst: subst.from_symbol == sym
-                                ))
-                            )
+                        Constructor.new(
+                            template=Template.new(
+                                origin=c.origin,
+                                instance=c.instance.substitute_all(substs),
+                                new_symbols=c.new_symbols.filter(
+                                    lambda sym: Not(substs.any(
+                                        lambda subst: subst.from_symbol == sym
+                                    ))
+                                )
+                            ),
+                            substs=substs
                         ).singleton
                     ),
-                    No(Template.array)
+                    No(Constructor.array)
                 )
             )
         )
 
-    @langkit_property(return_type=T.Template.array.array)
-    def grouped_constructors_impl(constrs=T.Template.array, i=T.Int):
+    @langkit_property(return_type=T.Constructor.array.array)
+    def grouped_constructors_impl(constrs=T.Constructor.array, i=T.Int):
         filtered = Var(constrs.filter(
-            lambda c: c.instance.param_count == i
+            lambda c: c.template.instance.param_count == i
         ))
         not_filtered = Var(constrs.filter(
-            lambda c: c.instance.param_count != i
+            lambda c: c.template.instance.param_count != i
         ))
         return filtered.singleton.concat(
             not_filtered.then(
@@ -687,7 +700,7 @@ class Term(DependzNode):
             )
         )
 
-    @langkit_property(return_type=T.Template.array.array)
+    @langkit_property(return_type=T.Constructor.array.array)
     def grouped_constructors(generics=T.Symbol.array):
         return Self.grouped_constructors_impl(
             Self.constructors_impl(generics), 0
@@ -709,7 +722,7 @@ class Term(DependzNode):
         )))
 
         return normed.constructors_impl(generics).map(
-            lambda c: c.origin.as_bare_entity
+            lambda c: c.template.origin.as_bare_entity
         )
 
     @langkit_property(return_type=T.Term)
@@ -762,9 +775,21 @@ class Term(DependzNode):
             new_symbols.concat(hole_sym.singleton)
         ))
 
-        return rec
+        ap = Var(rec.cast_or_raise(Apply))
 
-    @langkit_property(return_type=T.Term)
+        return If(
+            ap.rhs.equivalent(hole_id),
+            ar.lhs.synthesize_constructor(new_symbols).then(
+                lambda r: Self.make_apply(
+                    ap.lhs.substitute_all(r.constraints),
+                    r.term
+                )
+            ),
+            rec
+        )
+
+    @langkit_property(return_type=T.Term,
+                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def synthesize_apply(built=T.Term, callee_type=T.Term,
                          new_symbols=T.Symbol.array):
         return callee_type.match(
@@ -774,18 +799,44 @@ class Term(DependzNode):
             lambda _: built
         )
 
-    @langkit_property(return_type=T.Term)
+    @langkit_property(return_type=T.ConstrainedTerm)
+    def synthesize_constructor_helper(all_constrs=T.Constructor.array.array,
+                                      nth=T.Int, i=(T.Int, 0), j=(T.Int, 0)):
+        return Cond(
+            i >= all_constrs.length,
+            No(ConstrainedTerm),
+
+            j >= all_constrs.at(i).length,
+            Self.synthesize_constructor_helper(
+                all_constrs, nth, i + 1, 0
+            ),
+
+            Let(lambda c=all_constrs.at(i).at(j): Self.synthesize_apply(
+                c.template.origin,
+                c.template.instance,
+                c.template.new_symbols
+            ).then(
+                lambda r: If(
+                    nth == 0,
+                    ConstrainedTerm.new(
+                        term=r,
+                        constraints=c.substs
+                    ),
+                    Self.synthesize_constructor_helper(
+                        all_constrs, nth - 1, i, j + 1
+                    )
+                ),
+                default_val=Self.synthesize_constructor_helper(
+                    all_constrs, nth, i, j + 1
+                )
+            ))
+        )
+
+    @langkit_property(return_type=T.ConstrainedTerm)
     def synthesize_constructor(generics=(T.Symbol.array)):
-        all_constrs = Var(Self.grouped_constructors(generics))
-        return all_constrs.mapcat(
-            lambda cstrs: cstrs.mapcat(
-                lambda c: Self.synthesize_apply(
-                    c.origin,
-                    c.instance,
-                    c.new_symbols
-                ).singleton
-            )
-        ).at(0)
+        return Self.synthesize_constructor_helper(
+            Self.grouped_constructors(generics), 0
+        )
 
     @langkit_property(public=True, return_type=T.Term)
     def synthesize():
@@ -794,7 +845,7 @@ class Term(DependzNode):
             lambda ab=Abstraction: PropertyError(
                 Term, "Abstractions are not valid domains"
             ),
-            lambda other: other.synthesize_constructor(No(Symbol.array))
+            lambda other: other.synthesize_constructor(No(Symbol.array)).term
         )
 
     @langkit_property(public=True, return_type=T.Symbol.array, memoized=True)

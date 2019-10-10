@@ -14,3 +14,9 @@ MkWrappedNat : Nat -> WrappedNat
 
 test_fun_2 : Nat -> WrappedNat
 test_fun_2 = hole
+
+NatType : Nat -> Type
+MkNatType : n:Nat -> NatType n
+
+test_fun_3 : n:Nat -> NatType n
+test_fun_3 = hole

@@ -4,3 +4,5 @@ test_fun_1: Success
   test_fun_1 = (\x. Z)
 test_fun_2: Success
   test_fun_2 = (\x. (MkWrappedNat Z))
+test_fun_3: Success
+  test_fun_3 = (\x. (MkNatType x))

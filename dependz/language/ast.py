@@ -78,12 +78,20 @@ class Constructor(Struct):
     substs = UserField(type=Substitution.array)
 
 
+class SynthesisContext(Struct):
+    intros = UserField(type=T.Symbol.array)
+
+
 unification_context = DynamicVariable(
     "unification_context", type=UnificationContext
 )
 
 ho_unification_context = DynamicVariable(
     "ho_unification_context", type=HigherOrderUnificationContext
+)
+
+synthesis_context = DynamicVariable(
+    "synthesis_context", type=SynthesisContext
 )
 
 
@@ -725,7 +733,7 @@ class Term(DependzNode):
             lambda c: c.template.origin.as_bare_entity
         )
 
-    @langkit_property(return_type=T.Term)
+    @langkit_property(return_type=T.Term, dynamic_vars=[synthesis_context])
     def synthesize_abstraction():
         ar = Var(Self.cast_or_raise(Arrow))
         sym = Var(Self.free_fresh_symbol(ar.binder._.cast(Identifier).then(
@@ -747,32 +755,49 @@ class Term(DependzNode):
                     )
                 ),
                 default_val=ar.rhs
-            ).synthesize
+            ).then(
+                lambda rhs: synthesis_context.bind(
+                    SynthesisContext.new(
+                        intros=synthesis_context.intros.concat(sym.singleton)
+                    ),
+                    rhs.synthesize_impl
+                )
+            )
         )
 
-    @langkit_property(return_type=T.Term,
+    @langkit_property(return_type=T.Term, dynamic_vars=[synthesis_context],
                       activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def synthesize_apply_arrow(built=T.Term, ar=T.Arrow,
                                new_symbols=T.Symbol.array):
-        hole_sym = Var(Self.free_fresh_symbol("hole"))
+        hole_sym = Var(built.free_fresh_symbol("hole"))
         hole_id = Var(Self.make_ident(hole_sym))
 
-        rhs_type = ar.binder.then(
-            lambda b: b.cast(Identifier).then(
-                lambda id: ar.rhs.substitute(id.sym, hole_id),
-                default_val=PropertyError(
-                    Term, "Non-identifier binders are not handled yet."
-                )
-            ),
-            default_val=ar.rhs
-        )
+        binder = Var(ar.binder.then(
+            lambda b: b.cast(Identifier)._or(PropertyError(
+                Identifier, "Non-identifier binders are not handled yet."
+            ))
+        ))
+
+        is_introduced = Var(binder.then(
+            lambda b: synthesis_context.intros.contains(b.sym)
+        ))
+
+        new_built = Var(Self.make_apply(
+            built, If(is_introduced, binder, hole_id)
+        ))
+
+        rhs_type = Var(If(
+            binder.is_null | is_introduced,
+            ar.rhs,
+            ar.rhs.substitute(binder.sym, hole_id)
+        ))
 
         rec = Var(Self.synthesize_apply(
-            Self.make_apply(
-                built, hole_id
-            ),
+            new_built,
             rhs_type,
-            new_symbols.concat(hole_sym.singleton)
+            If(is_introduced,
+               new_symbols,
+               new_symbols.concat(hole_sym.singleton))
         ))
 
         ap = Var(rec.cast_or_raise(Apply))
@@ -788,7 +813,7 @@ class Term(DependzNode):
             rec
         )
 
-    @langkit_property(return_type=T.Term,
+    @langkit_property(return_type=T.Term, dynamic_vars=[synthesis_context],
                       activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def synthesize_apply(built=T.Term, callee_type=T.Term,
                          new_symbols=T.Symbol.array):
@@ -799,7 +824,8 @@ class Term(DependzNode):
             lambda _: built
         )
 
-    @langkit_property(return_type=T.ConstrainedTerm)
+    @langkit_property(return_type=T.ConstrainedTerm,
+                      dynamic_vars=[synthesis_context])
     def synthesize_constructor_helper(all_constrs=T.Constructor.array.array,
                                       nth=T.Int, i=(T.Int, 0), j=(T.Int, 0)):
         return Cond(
@@ -832,20 +858,30 @@ class Term(DependzNode):
             ))
         )
 
-    @langkit_property(return_type=T.ConstrainedTerm)
+    @langkit_property(return_type=T.ConstrainedTerm,
+                      dynamic_vars=[synthesis_context])
     def synthesize_constructor(generics=(T.Symbol.array)):
         return Self.synthesize_constructor_helper(
             Self.grouped_constructors(generics), 0
         )
 
-    @langkit_property(public=True, return_type=T.Term)
-    def synthesize():
+    @langkit_property(return_type=T.Term, dynamic_vars=[synthesis_context])
+    def synthesize_impl():
         return Self.normalize.match(
             lambda ar=Arrow: ar.synthesize_abstraction,
             lambda ab=Abstraction: PropertyError(
                 Term, "Abstractions are not valid domains"
             ),
             lambda other: other.synthesize_constructor(No(Symbol.array)).term
+        )
+
+    @langkit_property(public=True, return_type=T.Term)
+    def synthesize():
+        return synthesis_context.bind(
+            SynthesisContext.new(
+                intros=No(Symbol.array)
+            ),
+            Self.synthesize_impl
         )
 
     @langkit_property(public=True, return_type=T.Symbol.array, memoized=True)

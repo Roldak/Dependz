@@ -1,0 +1,20 @@
+Type : Type
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+Bool  : Type
+True  : Bool
+False : Bool
+
+Eq : t -> t -> Type
+Refl : Eq x x
+
+not : Bool -> Bool
+not = match (case True False (case False True))
+
+DPair : a:t -> P : (a -> q) -> Type
+DPMake : x:a -> P x -> DPair a P
+
+test_1 : b:Bool -> DPair Bool (Eq (not b))
+test_1 = hole

@@ -800,14 +800,14 @@ class Term(DependzNode):
                new_symbols.concat(hole_sym.singleton))
         ))
 
-        ap = Var(rec.cast_or_raise(Apply))
-
         return If(
-            ap.rhs.equivalent(hole_id),
+            rec.is_free(hole_sym),
             ar.lhs.synthesize_constructor(new_symbols).then(
-                lambda r: Self.make_apply(
-                    ap.lhs.substitute_all(r.constraints),
-                    r.term
+                lambda c: rec.substitute_all(
+                    Substitution.new(
+                        from_symbol=hole_sym,
+                        to_term=c.term
+                    ).singleton.concat(c.constraints)
                 )
             ),
             rec

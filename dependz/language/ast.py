@@ -1085,19 +1085,21 @@ class Term(DependzNode):
         )
 
     @langkit_property(return_type=T.Term)
-    def substitute_all(substs=Substitution.array, idx=(T.Int, 0)):
+    def substitute_all(substs=Substitution.array, idx=(T.Int, 0),
+                       unsafe=(T.Bool, False)):
         return substs.at(idx).then(
             lambda r: Self.substitute(
                 r.from_symbol,
-                r.to_term
+                r.to_term,
+                unsafe
             ).substitute_all(
-                substs, idx + 1
+                substs, idx + 1, unsafe
             ),
             default_val=Self
         )
 
     @langkit_property(public=True, return_type=T.Term, memoized=True)
-    def substitute(sym=T.Symbol, val=T.Term):
+    def substitute(sym=T.Symbol, val=T.Term, unsafe=(T.Bool, False)):
         return Self.match(
             lambda id=Identifier: If(
                 id.sym == sym,
@@ -1105,32 +1107,32 @@ class Term(DependzNode):
                 id
             ),
             lambda ap=Apply: ap.make_apply(
-                ap.lhs.substitute(sym, val),
-                ap.rhs.substitute(sym, val)
+                ap.lhs.substitute(sym, val, unsafe),
+                ap.rhs.substitute(sym, val, unsafe)
             ),
             lambda ab=Abstraction: If(
                 ab.ident.sym == sym,
                 ab,
                 If(
-                    val.is_free(ab.ident.sym),
+                    val.is_free(ab.ident.sym) & Not(unsafe),
                     ab.term.free_fresh_symbol(ab.ident.sym).then(
                         lambda symp: ab.make_abstraction(
                             ab.make_ident(symp),
                             ab.term
                             .rename(ab.ident.sym, symp)
-                            .substitute(sym, val)
+                            .substitute(sym, val, False)
                         )
                     ),
                     ab.make_abstraction(
                         ab.ident,
-                        ab.term.substitute(sym, val)
+                        ab.term.substitute(sym, val, unsafe)
                     )
                 )
             ),
             lambda ar=Arrow: Self.make_arrow(
-                ar.lhs.substitute(sym, val),
-                ar.rhs.substitute(sym, val),
-                ar.binder._.substitute(sym, val)
+                ar.lhs.substitute(sym, val, unsafe),
+                ar.rhs.substitute(sym, val, unsafe),
+                ar.binder._.substitute(sym, val, unsafe)
             )
         )
 

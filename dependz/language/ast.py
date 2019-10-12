@@ -783,14 +783,12 @@ class Term(DependzNode):
     @langkit_property(return_type=SynthesizationAttempt,
                       dynamic_vars=[synthesis_context])
     def synthesize_apply_arrow(built=T.Term, ar=T.Arrow):
-        binder = Var(ar.binder.then(
-            lambda b: b.cast(Identifier)._or(PropertyError(
-                Identifier, "Non-identifier binders are not handled yet."
-            ))
-        ))
+        binder = Var(ar.binder)
 
         is_introduced = Var(binder.then(
-            lambda b: synthesis_context.intros.contains(b.sym)
+            lambda b: b.free_symbols.all(
+                lambda s: synthesis_context.intros.contains(s)
+            )
         ))
 
         arg = Var(If(
@@ -807,7 +805,15 @@ class Term(DependzNode):
         rhs_type = Var(If(
             binder.is_null | is_introduced,
             ar.rhs,
-            ar.rhs.substitute(binder.sym, arg.term)
+            ar.rhs.substitute(
+                binder.cast(Identifier).then(
+                    lambda b: b.sym,
+                    default_val=PropertyError(
+                        Symbol, "Non-identifier binders are not handled yet."
+                    )
+                ),
+                arg.term
+            )
         ))
 
         rec = Var(Self.synthesize_apply(new_built, rhs_type))

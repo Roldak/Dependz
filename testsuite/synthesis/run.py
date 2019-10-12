@@ -49,7 +49,7 @@ def run(src_file):
             print("{} : Failed".format(intro_name))
 
             try:
-                d.f_term.p_constructors
+                d.f_term.p_synthesize
             except ldl.PropertyError:
                 print("A crash occurred while attempting to synthesize {}.".format(
                     intro_name

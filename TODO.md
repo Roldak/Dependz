@@ -39,3 +39,7 @@
   where we are trying to unify `x:Nat -> P x` with `Nat -> Nat`.
   Idea: recurse anyway and add a Predicate equation that asserts that the
   resulting arrow type has no constraining binder?
+
+- Improve synthesization. Ideas:
+  - Update unification algorithm to generate all possibilities.
+  - Make sure recursion is valid, i.e. the resulting term terminates.

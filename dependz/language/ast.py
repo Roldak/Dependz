@@ -1625,12 +1625,13 @@ class Term(DependzNode):
                             to_term=b
                         ).singleton
                     ))
+                ),
+                id_dom=ab.ident.domain_val._or(
+                    result_domain.cast(Arrow)._.lhs
                 ):
 
                 TypingsDescription.new(
-                    bindings=ab.ident.domain_val._or(
-                        result_domain.cast(Arrow)._.lhs
-                    ).then(
+                    bindings=id_dom.then(
                         lambda lhs_dom:
 
                         term_res.bindings.at(0).domain_val.then(
@@ -1644,7 +1645,19 @@ class Term(DependzNode):
                         )
                     ).singleton.concat(term_res.bindings),
 
-                    equations=term_res.equations,
+                    equations=term_res.equations.concat(id_dom.then(
+                        lambda lhs_dom:
+                        ab.term.find_occurrences(ab.ident.sym).map(
+                            lambda id: term_res.bindings.find(
+                                lambda b: b.target == id
+                            ).then(
+                                lambda b: UnifyQuery.new(
+                                    first=lhs_dom,
+                                    second=b.domain_val
+                                )
+                            )
+                        )
+                    )),
 
                     new_symbols=term_res.new_symbols
                 )

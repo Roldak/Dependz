@@ -1,0 +1,36 @@
+test_1: Success
+  <Apply test.dep:20:10-20:41>: Nat
+  <Apply test.dep:20:10-20:33>: (Nil:(List Nat) -> Nat)
+  <Apply test.dep:20:10-20:21>: ((Nil:Nat -> ((List Nat) -> Nat)) -> (Nil:(List Nat) -> Nat))
+  <SourceId test.dep:20:10-20:19>: (Nat -> ((Nil:Nat -> ((List Nat) -> Nat)) -> (Nil:(List Nat) -> Nat)))
+  <SourceId test.dep:20:20-20:21>: Nat
+  <Abstraction test.dep:20:23-20:32>: (Nil:Nat -> ((List Nat) -> Nat))
+  <SourceId test.dep:20:24-20:25>: Nat
+  <Abstraction test.dep:20:26-20:32>: ((List Nat) -> Nat)
+  <SourceId test.dep:20:27-20:29>: (List Nat)
+  <SourceId test.dep:20:31-20:32>: Nat
+  <SourceId test.dep:20:34-20:41>: (List Nat)
+test_2: Success
+  <Apply test.dep:23:10-23:33>: ((List t) -> Nat)
+  <Apply test.dep:23:10-23:21>: ((t -> ((List t) -> Nat)) -> ((List t) -> Nat))
+  <SourceId test.dep:23:10-23:19>: (Nat -> ((t -> ((List t) -> Nat)) -> ((List t) -> Nat)))
+  <SourceId test.dep:23:20-23:21>: Nat
+  <Abstraction test.dep:23:23-23:32>: (t -> ((List t) -> Nat))
+  <SourceId test.dep:23:24-23:25>: t
+  <Abstraction test.dep:23:26-23:32>: ((List t) -> Nat)
+  <SourceId test.dep:23:27-23:29>: (List t)
+  <SourceId test.dep:23:31-23:32>: Nat
+test_length: Success
+  <Apply test.dep:26:15-26:55>: ((List t) -> Nat)
+  <Apply test.dep:26:15-26:26>: ((t -> ((List t) -> Nat)) -> ((List t) -> Nat))
+  <SourceId test.dep:26:15-26:24>: (Nat -> ((t -> ((List t) -> Nat)) -> ((List t) -> Nat)))
+  <SourceId test.dep:26:25-26:26>: Nat
+  <Abstraction test.dep:26:28-26:54>: (t -> ((List t) -> Nat))
+  <SourceId test.dep:26:29-26:30>: t
+  <Abstraction test.dep:26:31-26:54>: ((List t) -> Nat)
+  <SourceId test.dep:26:32-26:34>: (List t)
+  <Apply test.dep:26:36-26:54>: Nat
+  <SourceId test.dep:26:36-26:37>: (Nat -> Nat)
+  <Apply test.dep:26:39-26:53>: Nat
+  <SourceId test.dep:26:39-26:50>: ((List t) -> Nat)
+  <SourceId test.dep:26:51-26:53>: (List t)

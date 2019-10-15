@@ -1,0 +1,27 @@
+Type : Type1
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+the : a:t -> a -> a
+the = \t.\x. x
+
+List : Type -> Type
+Nil : List t
+Cons : t -> List t -> List t
+
+elim_list : P Nil -> (x:t -> xs:List t -> P (Cons x xs)) -> x:List t -> P x
+elim_list = \n.\f.\l. match (case Nil n (case Cons f)) l
+
+my_list : List Nat
+my_list = Nil
+
+test_1 : Nat
+test_1 = elim_list Z (\x.\xs. Z) my_list
+
+test_2 : l:List t -> Nat
+test_2 = elim_list Z (\x.\xs. Z)
+
+test_length : l:List t -> Nat
+test_length = elim_list Z (\x.\xs. S (test_length xs))
+

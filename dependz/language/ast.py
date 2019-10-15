@@ -1305,33 +1305,29 @@ class Term(DependzNode):
     def domain_var():
         return Self.create_logic_var
 
-    @langkit_property(return_type=T.Equation)
-    def bind_occurrences(sym=T.Symbol, orig=T.LogicVar):
+    @langkit_property(return_type=T.Identifier.array)
+    def find_occurrences(sym=T.Symbol):
         return Self.match(
             lambda id=Identifier: If(
                 id.sym == sym,
-                Bind(orig, id.domain_var,
-                     conv_prop=Term.normalized_entities,
-                     eq_prop=Term.equivalent_entities),
-                LogicTrue()
+                id.singleton,
+                No(Identifier.array)
             ),
-            lambda ap=Apply: And(
-                ap.lhs.bind_occurrences(sym, orig),
-                ap.rhs.bind_occurrences(sym, orig)
-            ),
+
+            lambda ap=Apply:
+            ap.lhs.find_occurrences(sym)
+            .concat(ap.rhs.find_occurrences(sym)),
+
             lambda ab=Abstraction: If(
                 ab.ident.sym == sym,
-                LogicTrue(),
-                ab.term.bind_occurrences(sym, orig)
+                No(Identifier.array),
+                ab.term.find_occurrences(sym)
             ),
-            lambda ar=Arrow: And(
-                ar.lhs.bind_occurrences(sym, orig),
-                ar.rhs.bind_occurrences(sym, orig),
-                ar.binder.then(
-                    lambda b: b.bind_occurrences(sym, orig),
-                    default_val=LogicTrue()
-                )
-            )
+
+            lambda ar=Arrow:
+            ar.lhs.find_occurrences(sym)
+            .concat(ar.rhs.find_occurrences(sym))
+            .concat(ar.binder._.find_occurrences(sym))
         )
 
     @langkit_property(return_type=T.DomainEquation,
@@ -1395,8 +1391,12 @@ class Term(DependzNode):
 
                 DomainEquation.new(
                     eq=And(
-                        ab.term.bind_occurrences(
-                            ab.ident.sym, ab.ident.domain_var
+                        ab.term.find_occurrences(ab.ident.sym).logic_all(
+                            lambda id: Bind(
+                                ab.ident.domain_var, id.domain_var,
+                                conv_prop=Term.normalized_entities,
+                                eq_prop=Term.equivalent_entities
+                            ),
                         ),
                         Bind(ab.domain_var, ab.ident.domain_var,
                              conv_prop=Arrow.param,

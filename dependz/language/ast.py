@@ -668,6 +668,36 @@ class Term(DependzNode):
             lambda _: 0
         )
 
+    @langkit_property(return_type=T.Term.array)
+    def call_args():
+        return Self.match(
+            lambda ap=Apply: ap.lhs.call_args.concat(ap.rhs.singleton),
+            lambda _: No(Term.array)
+        )
+
+    @langkit_property(return_type=T.Bool)
+    def is_call_to(sym=T.Symbol, left_args=T.Int):
+        return Self.match(
+            lambda i=Identifier: (i.sym == sym) & (left_args == 0),
+            lambda ap=Apply: ap.lhs.is_call_to(sym, left_args - 1),
+            lambda _: False
+        )
+
+    @langkit_property(return_type=T.Term.array)
+    def find_calls_to(sym=T.Symbol, args=T.Int):
+        return Self.match(
+            lambda ap=Apply: ap.lhs.find_calls_to(sym, args).concat(
+                ap.rhs.find_calls_to(sym, args)
+            ),
+            lambda ar=Arrow: ar.lhs.find_calls_to(sym, args).concat(
+                ar.rhs.find_calls_to(sym, args)
+            ).concat(ar.binder._.find_calls_to(sym, args)),
+            lambda ab=Abstraction: ab.term.find_calls_to(sym, args),
+            lambda _: No(Term.array)
+        ).concat(Self.is_call_to(sym, args).then(
+            lambda _: Self.singleton
+        ))
+
     @langkit_property(return_type=T.Constructor.array,
                       activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def constructors_impl(generics=T.Symbol.array):

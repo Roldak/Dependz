@@ -1747,7 +1747,11 @@ class Term(DependzNode):
     def domain_chain():
         id = Var(Self.cast_or_raise(Identifier))
         domain = Var(id.intro._.term)
-        return Self.singleton.concat(domain._.domain_chain)
+        return Self.singleton.concat(If(
+            domain.cast(Identifier)._.intro._.term == domain,
+            domain.node.singleton,
+            domain._.domain_chain
+        ))
 
 
 @abstract

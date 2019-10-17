@@ -897,7 +897,8 @@ class Term(DependzNode):
 
     @langkit_property(return_type=SynthesizationAttempt.array,
                       activate_tracing=GLOBAL_ACTIVATE_TRACING)
-    def synthesize_attempt(attempt=SynthesizationAttempt):
+    def synthesize_attempt(attempt=SynthesizationAttempt,
+                           origin=T.Introduction):
         hole_syms = Var(attempt.holes.map(lambda h: h.sym))
         first_hole = Var(attempt.holes.at(0))
 
@@ -906,37 +907,34 @@ class Term(DependzNode):
         constrs = Var(
             first_hole.domain_val.synthesizable_constructors(hole_syms)
         )
-
         return synthesis_context.bind(first_hole.ctx, constrs.map(
             lambda c: dom.synthesize_apply(
                 c.template.origin,
                 c.template.instance
-            ).then(
-                lambda atp: Let(
-                    lambda substs=Substitution.new(
-                        from_symbol=first_hole.sym,
-                        to_term=atp.term
-                    ).singleton.concat(c.substs): SynthesizationAttempt.new(
-                        term=attempt.term.substitute_all(substs, unsafe=True),
-                        holes=attempt.holes.concat(atp.holes).filtermap(
-                            lambda h: SynthesizationHole.new(
-                                sym=h.sym,
-                                domain_val=h.domain_val.substitute_all(substs),
-                                ctx=h.ctx
-                            ),
-                            lambda h: Not(substs.any(
-                                lambda s: s.from_symbol == h.sym
-                            ))
-                        )
+            ).then(lambda atp: Let(
+                lambda substs=Substitution.new(
+                    from_symbol=first_hole.sym,
+                    to_term=atp.term
+                ).singleton.concat(c.substs): SynthesizationAttempt.new(
+                    term=attempt.term.substitute_all(substs, unsafe=True),
+                    holes=attempt.holes.concat(atp.holes).filtermap(
+                        lambda h: SynthesizationHole.new(
+                            sym=h.sym,
+                            domain_val=h.domain_val.substitute_all(substs),
+                            ctx=h.ctx
+                        ),
+                        lambda h: Not(substs.any(
+                            lambda s: s.from_symbol == h.sym
+                        ))
                     )
                 )
-            )
+            ))
         ))
 
     @langkit_property(return_type=T.Term,
                       activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def synthesize_breadth_first_search(attempts=SynthesizationAttempt.array,
-                                        depth=T.Int):
+                                        origin=T.Introduction, depth=T.Int):
         result = Var(attempts.find(lambda atp: atp.holes.length == 0))
         return Cond(
             Not(result.is_null),
@@ -947,20 +945,22 @@ class Term(DependzNode):
 
             Self.synthesize_breadth_first_search(
                 attempts.mapcat(
-                    lambda atp: Self.synthesize_attempt(atp)
+                    lambda atp: Self.synthesize_attempt(atp, origin)
                 ),
+                origin,
                 depth - 1
             )
         )
 
     @langkit_property(public=True, return_type=T.Term)
-    def synthesize():
+    def synthesize(origin=(T.Introduction, No(T.Introduction))):
         return synthesis_context.bind(
             SynthesisContext.new(
                 intros=No(Symbol.array)
             ),
             Self.synthesize_breadth_first_search(
                 Self.synthesize_impl.singleton,
+                origin,
                 10
             )
         )

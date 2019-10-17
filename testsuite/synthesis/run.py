@@ -34,7 +34,7 @@ def run(src_file):
         intro_name = d.f_ident.text
 
         try:
-            r = d.f_term.p_synthesize
+            r = d.f_term.p_synthesize(d)
         except ldl.PropertyError:
             r = None
 
@@ -49,7 +49,7 @@ def run(src_file):
             print("{} : Failed".format(intro_name))
 
             try:
-                d.f_term.p_synthesize
+                d.f_term.p_synthesize(d)
             except ldl.PropertyError:
                 print("A crash occurred while attempting to synthesize {}.".format(
                     intro_name

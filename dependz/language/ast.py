@@ -1271,26 +1271,27 @@ class Term(DependzNode):
     @langkit_property(public=True, return_type=T.Term, memoized=True)
     def normalize():
         evaled = Var(Self.eval)
-
-        return If(
+        to_norm = Var(If(
             # prevent infinite evaluation
             evaled.contains_term(Self),
             Self,
-            evaled.match(
-                lambda id=Identifier: id,
-                lambda ap=Apply: ap.make_apply(
-                    ap.lhs.normalize,
-                    ap.rhs.normalize
-                ),
-                lambda ab=Abstraction: ab.make_abstraction(
-                    ab.ident,
-                    ab.term.normalize
-                ),
-                lambda ar=Arrow: ar.make_arrow(
-                    ar.lhs.normalize,
-                    ar.rhs.normalize,
-                    ar.binder._.normalize
-                )
+            evaled
+        ))
+
+        return to_norm.match(
+            lambda id=Identifier: id,
+            lambda ap=Apply: ap.make_apply(
+                ap.lhs.normalize,
+                ap.rhs.normalize
+            ),
+            lambda ab=Abstraction: ab.make_abstraction(
+                ab.ident,
+                ab.term.normalize
+            ),
+            lambda ar=Arrow: ar.make_arrow(
+                ar.lhs.normalize,
+                ar.rhs.normalize,
+                ar.binder._.normalize
             )
         )
 

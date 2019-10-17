@@ -1093,7 +1093,7 @@ class Term(DependzNode):
     def eval_match():
         elim_call = Var(Self.cast_or_raise(Apply))
         elim_evaled = Var(elim_call.lhs.eval.cast(Apply))
-        elim_id = Var(elim_evaled._.left_most_term)
+        elim_id = Var(elim_evaled._.lhs)
         return If(
             elim_id.cast(Identifier)._.sym == "match",
             elim_evaled.rhs.extract_case_and_eval(

@@ -317,6 +317,14 @@ class Term(DependzNode):
 
     @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
                       dynamic_vars=[unification_context])
+    def first_order_match_equation(other=T.Term):
+        return UnifyEquation.new(
+            eq=LogicTrue(),
+            renamings=No(Renaming.array)
+        )
+
+    @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
+                      dynamic_vars=[unification_context])
     def first_order_flexible_flexible_equation(other=T.Term):
         vars = Var(unification_context.vars)
         self_var = Var(vars.elem(Self.cast(Identifier).sym))
@@ -460,12 +468,23 @@ class Term(DependzNode):
                     )
                 )
             )
-        )
+        ))
 
     @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
                       dynamic_vars=[unification_context])
     def first_order_unify_equation(other=T.Term):
         symbols = Var(unification_context.symbols)
+
+        def is_match(term):
+            return And(
+                term.is_match_application,
+                term.cast(Apply).rhs.cast(Identifier).then(
+                    lambda id: symbols.contains(id.sym)
+                )
+            )
+
+        self_is_match = Var(is_match(Self))
+        other_is_match = Var(is_match(other))
 
         self_is_metavar = Var(Self.cast(Identifier).then(
             lambda id: symbols.contains(id.sym)
@@ -473,10 +492,17 @@ class Term(DependzNode):
         other_is_metavar = Var(other.cast(Identifier).then(
             lambda id: symbols.contains(id.sym)
         ))
+
         self_has_metavar = Var(symbols.any(lambda s: Self.is_free(s)))
         other_has_metavar = Var(symbols.any(lambda s: other.is_free(s)))
 
         return Cond(
+            self_is_match,
+            Self.first_order_match_equation(other),
+
+            other_is_match,
+            other.first_order_match_equation(Self),
+
             self_is_metavar & other_is_metavar,
             Self.first_order_flexible_flexible_equation(other),
 
@@ -1086,13 +1112,19 @@ class Term(DependzNode):
             PropertyError(T.Term, "expected `case`")
         )
 
+    @langkit_property(return_type=T.Bool, memoized=True)
+    def is_match_application():
+        elim_call = Var(Self.cast(Apply))
+        elim_evaled = Var(elim_call._.lhs.eval.cast(Apply))
+        elim_id = Var(elim_evaled._.lhs)
+        return elim_id.cast(Identifier)._.sym == "match"
+
     @langkit_property(return_type=T.Term, memoized=True)
     def eval_match():
         elim_call = Var(Self.cast_or_raise(Apply))
         elim_evaled = Var(elim_call.lhs.eval.cast(Apply))
-        elim_id = Var(elim_evaled._.lhs)
         return If(
-            elim_id.cast(Identifier)._.sym == "match",
+            Self.is_match_application,
             elim_evaled.rhs.extract_case_and_eval(
                 elim_call.rhs.eval
             )._or(Self),

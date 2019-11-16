@@ -168,6 +168,11 @@ class DependzNode(ASTNode):
     def create_logic_var():
         pass
 
+    @langkit_property(external=True, return_type=T.LogicVar,
+                      uses_entity_info=False, uses_envs=False)
+    def create_named_logic_var(name=T.Symbol):
+        pass
+
     @langkit_property(return_type=T.DependzNode, activate_tracing=True)
     def here():
         return Self
@@ -267,7 +272,7 @@ class DependzNode(ASTNode):
 class LogicVarArray(DependzNode):
     @langkit_property(return_type=T.LogicVar, memoized=True)
     def elem(s=T.Symbol):
-        return Self.create_logic_var
+        return Self.create_named_logic_var(s)
 
 
 @abstract

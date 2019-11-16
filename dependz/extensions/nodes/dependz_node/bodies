@@ -30,9 +30,23 @@ end P_Next_Global_Integer;
 
 function P_Create_Logic_Var
   (Node : access Bare_Dependz_Node_Type'Class) return Logic_Var is
+   V : Logic_Var := Entity_Vars.Create;
 begin
-   return Eq_Node.Refs.Create;
+   if Node.Kind in Dependz_Term then
+      V.Dbg_Name := new String'
+        (Image (P_To_String (Convert_Dependz_Node_To_Term (Node)).Items));
+   end if;
+   return V;
 end P_Create_Logic_Var;
+
+function P_Create_Named_Logic_Var
+  (Node : access Bare_Dependz_Node_Type'Class;
+   Name : Symbol_Type) return Logic_Var is
+   V : Logic_Var := Entity_Vars.Create;
+begin
+   V.Dbg_Name := new String'(Image (Name));
+   return V;
+end P_Create_Named_Logic_Var;
 
 function P_Concat_Symbol_And_Integer
   (Node : access Bare_Dependz_Node_Type'Class;

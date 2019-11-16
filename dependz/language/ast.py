@@ -185,7 +185,7 @@ class DependzNode(ASTNode):
     def dump_mmz_map():
         pass
 
-    @langkit_property(return_type=Substitution.array,
+    @langkit_property(public=True, return_type=Substitution.array,
                       activate_tracing=GLOBAL_ACTIVATE_TRACING)
     def unify_all(queries=UnifyQuery.array, symbols=T.Symbol.array,
                   allow_incomplete=(T.Bool, False)):

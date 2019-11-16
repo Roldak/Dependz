@@ -33,9 +33,6 @@ def run(src_file):
     ctx = ldl.AnalysisContext()
     u = ctx.get_from_file(src_file)
 
-    def set_debug(v):
-        u.root.p_set_logic_equation_debug_mode(1 if v else 0)
-
     assert not u.diagnostics
 
     all_queries = queries(u)
@@ -48,19 +45,16 @@ def run(src_file):
         substs = u.root.p_unify_all(list(all_queries), list(all_free_syms))
     except ldl.PropertyError:
         substs = None
+        print("A crash occurred during unification.")
+        print(traceback.print_exc())
 
-    if substs:
+    if substs is not None:
         print("Unification success: {}".format({
             s.from_symbol: s.to_term.p_to_string
             for s in substs
         }))
     else:
         print("Unification failure")
-        set_debug(True)
-        try:
-            u.root.p_unify_all(list(all_queries), list(all_free_syms))
-        except ldl.PropertyError:
-            print(traceback.print_exc())
 
 
 if __name__ == "__main__":

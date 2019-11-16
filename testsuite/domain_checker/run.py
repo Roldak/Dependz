@@ -16,9 +16,6 @@ def run(src_file):
     ctx = ldl.AnalysisContext()
     u = ctx.get_from_file(src_file)
 
-    def set_debug(v):
-        u.root.p_set_logic_equation_debug_mode(1 if v else 0)
-
     assert not u.diagnostics
 
     for d in defs_to_domain_check(u):
@@ -28,6 +25,10 @@ def run(src_file):
             r = d.p_check_domains(3)
         except ldl.PropertyError:
             r = False
+            print("A crash occurred while domain checking {}.".format(
+                def_name
+            ))
+            traceback.print_exc()
 
         if r:
             print("{}: Success".format(def_name))
@@ -35,18 +36,7 @@ def run(src_file):
                 dom = t.p_domain_val
                 print("  {}: {}".format(t, dom.p_to_string if dom else "None"))
         else:
-            set_debug(True)
             print("{} : Failed".format(def_name))
-
-            try:
-                d.p_check_domains(3)
-            except ldl.PropertyError:
-                print("A crash occurred while domain checking {}.".format(
-                    def_name
-                ))
-                traceback.print_exc()
-
-            set_debug(False)
 
 
 if __name__ == "__main__":

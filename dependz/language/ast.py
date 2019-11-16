@@ -13,9 +13,6 @@ from langkit.expressions import (
 )
 
 
-GLOBAL_ACTIVATE_TRACING = False
-
-
 class Renaming(Struct):
     from_symbol = UserField(type=T.Symbol)
     to_symbol = UserField(type=T.Symbol)
@@ -186,7 +183,7 @@ class DependzNode(ASTNode):
         pass
 
     @langkit_property(public=True, return_type=Substitution.array,
-                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
+                      activate_tracing=True)
     def unify_all(queries=UnifyQuery.array, symbols=T.Symbol.array,
                   allow_incomplete=(T.Bool, False)):
         vars = Var(Self.make_logic_var_array)
@@ -303,7 +300,7 @@ class Term(DependzNode):
 
     @langkit_property(return_type=T.Bool,
                       dynamic_vars=[unification_context],
-                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
+                      activate_tracing=True)
     def unifies_with(other=T.Term):
         current_self = Var(Self.solve_time_substitution.normalize)
         current_other = Var(other.solve_time_substitution.normalize)
@@ -501,7 +498,7 @@ class Term(DependzNode):
     @langkit_property(return_type=T.Bool,
                       dynamic_vars=[unification_context,
                                     ho_unification_context],
-                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
+                      activate_tracing=True)
     def higher_order_check_current_solution():
         return Entity.make_apply(
             Self,
@@ -540,7 +537,7 @@ class Term(DependzNode):
         ).as_bare_entity
 
     @langkit_property(return_type=T.UnifyEquation,
-                      activate_tracing=GLOBAL_ACTIVATE_TRACING,
+                      activate_tracing=True,
                       dynamic_vars=[unification_context])
     def higher_order_single_arg_equation(arg=T.Term, res=T.Term,
                                          ho_sym=T.Symbol):
@@ -699,7 +696,7 @@ class Term(DependzNode):
         ))
 
     @langkit_property(return_type=T.Constructor.array,
-                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
+                      activate_tracing=True)
     def constructors_impl(generics=T.Symbol.array):
         constrs = Var(Self.unit.root.cast(Program).all_constructors.map(
             lambda c: c.as_template(c.ident)
@@ -855,7 +852,7 @@ class Term(DependzNode):
 
     @langkit_property(return_type=SynthesizationAttempt,
                       dynamic_vars=[synthesis_context],
-                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
+                      activate_tracing=True)
     def synthesize_apply(built=T.Term, callee_type=T.Term):
         return callee_type.match(
             lambda ar=Arrow:
@@ -896,7 +893,7 @@ class Term(DependzNode):
         )
 
     @langkit_property(return_type=SynthesizationAttempt.array,
-                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
+                      activate_tracing=True)
     def synthesize_attempt(attempt=SynthesizationAttempt,
                            origin=T.Introduction):
         hole_syms = Var(attempt.holes.map(lambda h: h.sym))
@@ -932,7 +929,7 @@ class Term(DependzNode):
         ))
 
     @langkit_property(return_type=T.Term,
-                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
+                      activate_tracing=True)
     def synthesize_breadth_first_search(attempts=SynthesizationAttempt.array,
                                         origin=T.Introduction, depth=T.Int):
         result = Var(attempts.find(lambda atp: atp.holes.length == 0))
@@ -1363,7 +1360,7 @@ class Term(DependzNode):
 
     @langkit_property(return_type=T.DomainEquation,
                       uses_entity_info=False,
-                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
+                      activate_tracing=True)
     def domain_equation(bindings=Binding.array):
         relevant_binding = Var(bindings.find(
             lambda b: b.target == Self
@@ -1503,7 +1500,7 @@ class Term(DependzNode):
         )
 
     @langkit_property(public=False, return_type=TypingsDescription,
-                      activate_tracing=GLOBAL_ACTIVATE_TRACING)
+                      activate_tracing=True)
     def instantiate_templates(result_domain=T.Term,
                               templates=Template.array,
                               reps=T.Substitution.array):

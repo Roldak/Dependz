@@ -1771,7 +1771,11 @@ class Term(DependzNode):
     def self_or_higher_ranked_term(other=T.Term):
         self_chain = Var(Self.domain_chain)
         other_chain = Var(other.domain_chain)
-        first_common = Var(self_chain.find(lambda d: other_chain.contains(d)))
+        first_common = Var(self_chain.find(
+            lambda d1: other_chain.any(
+                lambda d2: d1.equivalent(d2)
+            )
+        ))
         return first_common._or(PropertyError(Term, "Terms are incompatible"))
 
     @langkit_property(return_type=T.Term.array, memoized=True)
@@ -1779,7 +1783,7 @@ class Term(DependzNode):
         id = Var(Self.cast_or_raise(Identifier))
         domain = Var(id.intro._.term)
         return Self.singleton.concat(If(
-            domain.cast(Identifier)._.intro._.term == domain,
+            domain.cast(Identifier).then(lambda d: d.intro._.term == domain),
             domain.node.singleton,
             domain._.domain_chain
         ))

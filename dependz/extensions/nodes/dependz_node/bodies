@@ -34,14 +34,6 @@ begin
    return Eq_Node.Refs.Create;
 end P_Create_Logic_Var;
 
-function P_Set_Logic_Equation_Debug_Mode
-  (Node : access Bare_Dependz_Node_Type'Class; Mode : Integer) return Boolean
-is
-begin
-   Set_Debug_State (Debug_State_Type'Val (Mode));
-   return True;
-end P_Set_Logic_Equation_Debug_Mode;
-
 function P_Concat_Symbol_And_Integer
   (Node : access Bare_Dependz_Node_Type'Class;
    S : Symbol_Type;

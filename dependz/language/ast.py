@@ -58,6 +58,8 @@ class TypingsDescription(Struct):
 class UnificationContext(Struct):
     symbols = UserField(type=T.Symbol.array)
     vars = UserField(type=T.LogicVarArray)
+    self_parent = UserField(type=T.Term)
+    other_parent = UserField(type=T.Term)
 
 
 class HigherOrderUnificationContext(Struct):
@@ -193,7 +195,9 @@ class DependzNode(ASTNode):
                 lambda q: unification_context.bind(
                     UnificationContext.new(
                         symbols=symbols,
-                        vars=vars
+                        vars=vars,
+                        self_parent=No(Term),
+                        other_parent=No(Term)
                     ),
                     q.first.unify_equation(q.second)
                 )
@@ -399,7 +403,13 @@ class Term(DependzNode):
                 )
             )
 
-        return Self.match(
+        updated_ctx = Var(UnificationContext.new(
+            vars=unification_context.vars,
+            symbols=unification_context.symbols,
+            self_parent=Self,
+            other_parent=other
+        ))
+        return unification_context.bind(updated_ctx, Self.match(
             lambda id=Identifier: unify_case(
                 Identifier,
                 lambda oid: UnifyEquation.new(
@@ -637,21 +647,25 @@ class Term(DependzNode):
     def unify_equation(other=T.Term):
         symbols = Var(unification_context.symbols)
 
-        def outermost_metavar_application_of(term):
+        def outermost_metavar_application_of(term, parent_term):
             return term.cast(Apply)._.left_most_term.cast(Identifier).then(
                 lambda id: If(
                     # Check the id is indeed a metavariable, and that it's the
                     # first time we discover this higher order application.
                     # (if it's not, it means term.parent must not be an Apply).
                     And(symbols.contains(id.sym),
-                        Not(term.parent.cast(Apply)._.lhs == term)),
+                        Not(parent_term.cast(Apply)._.lhs == term)),
                     id,
                     No(Identifier)
                 )
             )
 
-        self_hoa = Var(outermost_metavar_application_of(Self))
-        other_hoa = Var(outermost_metavar_application_of(other))
+        self_hoa = Var(outermost_metavar_application_of(
+            Self, unification_context.self_parent
+        ))
+        other_hoa = Var(outermost_metavar_application_of(
+            other, unification_context.other_parent
+        ))
 
         unify_eqs = Var(
             Self.first_order_unify_equation(other).singleton

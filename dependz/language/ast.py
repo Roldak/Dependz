@@ -2018,7 +2018,7 @@ class Definition(DependzNode):
                         lambda substs=Self.unify_all(
                             result.equations,
                             instances.mapcat(
-                                lambda i: i.instance.free_symbols
+                                lambda i: i.new_symbols
                             ).concat(
                                 result.new_symbols
                             )

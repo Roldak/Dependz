@@ -1,0 +1,27 @@
+Type : Type
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+elim_nat : P Z -> (k:Nat -> P (S k)) -> x:Nat -> P x
+elim_nat = \b. \p. match (case Z b (case S p))
+
+A : Type
+B : Type
+C : Type
+
+k : Nat
+l : Nat
+
+q1_first : P Z
+q1_second : A
+
+q3_first : P (S Z)
+q3_second : B
+
+q4_first : P (S (S k))
+q4_second : C
+
+q0_first : P k
+q0_second : elim_nat A (\p. elim_nat B (\q. C) p) k
+

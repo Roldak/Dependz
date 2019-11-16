@@ -1,0 +1,32 @@
+Type : Type
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+A : Type
+mkA : A
+
+B : Type
+mkB : B
+
+C : Type
+mkC : C
+
+elim_nat : P Z -> (k:Nat -> P (S k)) -> x:Nat -> P x
+elim_nat = \b. \p. match (case Z b (case S p))
+
+elim_nat_2 : P Z -> (l:Nat -> P (S l)) -> y:Nat -> P y
+elim_nat_2 = \b. \p. match (case Z b (case S p))
+
+test_1 : a:Nat -> elim_nat A (\b. elim_nat_2 B (\c. C) b) a
+test_1 = \e. elim_nat mkA (\f. elim_nat_2 h h f) e
+
+WrappedNat : Nat -> Type
+MkWrapped : n:Nat -> WrappedNat n
+
+tmp : k:Nat -> WrappedNat (S k)
+tmp = \x. MkWrapped (S x)
+h : t
+
+taest_2 : m:Nat -> WrappedNat m
+taest_2 = \h. elim_nat (MkWrapped Z) (\j. elim_nat (MkWrapped (S Z)) (\i. MkWrapped (S (S i))) j) h

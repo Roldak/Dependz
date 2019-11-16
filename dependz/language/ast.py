@@ -1468,13 +1468,19 @@ class Term(DependzNode):
                         ),
 
                         Or(
-                            Bind(ar.domain_var, ar.lhs.domain_var,
-                                 eq_prop=Term.equivalent_entities),
-                            Bind(ar.domain_var, ar.rhs.domain_var,
-                                 eq_prop=Term.equivalent_entities)
-                        ),
-                        Predicate(Term.is_highest_ranked_term, ar.domain_var,
-                                  ar.lhs.domain_var, ar.rhs.domain_var)
+                            And(
+                                Predicate(Term.is_highest_ranked_term,
+                                          ar.lhs.domain_var, ar.rhs.domain_var),
+                                Bind(ar.domain_var, ar.lhs.domain_var,
+                                     eq_prop=Term.equivalent_entities),
+                            ),
+                            And(
+                                Predicate(Term.is_highest_ranked_term,
+                                          ar.rhs.domain_var, ar.lhs.domain_var),
+                                Bind(ar.domain_var, ar.rhs.domain_var,
+                                     eq_prop=Term.equivalent_entities)
+                            )
+                        )
                     ),
                     templates=lhs_eq.templates.concat(
                         rhs_eq.templates
@@ -1762,10 +1768,9 @@ class Term(DependzNode):
         return Self.domain_var.get_value._.node.cast_or_raise(Term)
 
     @langkit_property(return_type=T.Bool)
-    def is_highest_ranked_term(fst=DependzNode.entity, snd=DependzNode.entity):
-        t1 = Var(fst.cast_or_raise(Term).node)
-        t2 = Var(snd.cast_or_raise(Term).node)
-        return Self.equivalent(t1.self_or_higher_ranked_term(t2))
+    def is_highest_ranked_term(other=DependzNode.entity):
+        other_term = Var(other.cast_or_raise(Term).node)
+        return Self.self_or_higher_ranked_term(other_term) == Self
 
     @langkit_property(return_type=T.Term, memoized=True)
     def self_or_higher_ranked_term(other=T.Term):

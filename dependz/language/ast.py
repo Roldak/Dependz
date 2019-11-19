@@ -1199,7 +1199,13 @@ class Term(DependzNode):
                     ar.rhs.equivalent(o.rhs),
                     ar.binder.then(
                         lambda b: o.binder.then(
-                            lambda ob: b.equivalent(ob),
+                            lambda ob: Or(
+                                b.equivalent(ob),
+                                And(
+                                    Not(ar.has_constraining_binder),
+                                    Not(o.has_constraining_binder)
+                                )
+                            ),
                             default_val=Not(ar.has_constraining_binder)
                         ),
                         default_val=Not(o.has_constraining_binder)

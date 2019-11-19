@@ -49,10 +49,11 @@ def run(src_file):
         print(traceback.print_exc())
 
     if substs is not None:
-        print("Unification success: {}".format({
-            s.from_symbol: s.to_term.p_to_string
-            for s in substs
-        }))
+        print("Unification success:")
+        for s in substs:
+            print("  {} -> {}".format(
+                s.from_symbol, s.to_term.p_to_string
+            ))
     else:
         print("Unification failure")
 

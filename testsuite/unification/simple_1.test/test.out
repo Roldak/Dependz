@@ -1,0 +1,2 @@
+Unification success:
+  P -> ((elim_nat A) (\p. (((elim_nat B) (\q. C)) p)))

@@ -345,7 +345,11 @@ class Term(DependzNode):
         other_var = Var(vars.elem(other.cast(Identifier).sym))
 
         return UnifyEquation.new(
-            eq=Bind(self_var, other_var, eq_prop=Term.equivalent_entities),
+            eq=If(
+                Self.cast(Identifier).sym == other.cast(Identifier).sym,
+                LogicTrue(),
+                Bind(self_var, other_var)
+            ),
             renamings=No(Renaming.array)
         )
 

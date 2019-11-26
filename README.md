@@ -58,7 +58,7 @@ Note that the main missing feature is term deconstruction (via pattern matching 
 
 # Building
 
-Clone this repository, then clone Langkit inside it. Please use [this branch](https://github.com/Roldak/langkit/tree/topic/custom_tracing) for now.
+Clone this repository, then clone Langkit inside it. Please use [this branch](https://github.com/Roldak/langkit/tree/Dependz) for now.
 You also need to have a working GNAT in your path.
 Then simply do `dependz/manage.py make`.
 

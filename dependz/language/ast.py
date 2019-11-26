@@ -2176,7 +2176,8 @@ class Definition(DependzNode):
                                bindings=Binding.array, tries=T.Int):
         term_eq = Var(Self.term.domain_equation(bindings))
         domain_eq = Var(And(
-            Bind(Self.term.domain_var, expected_domain),
+            Bind(Self.term.domain_var, expected_domain,
+                 eq_prop=Term.equivalent_entities),
             term_eq.eq
         ))
         return term_eq.templates.then(

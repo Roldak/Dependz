@@ -175,6 +175,11 @@ class DependzNode(ASTNode):
     def create_named_logic_var(name=T.Symbol):
         pass
 
+    @langkit_property(external=True, return_type=T.Bool,
+                      uses_entity_info=False, uses_envs=False)
+    def set_allow_orphan_relations(do_allow=T.Bool):
+        pass
+
     @langkit_property(return_type=T.DependzNode, activate_tracing=True)
     def here():
         return Self
@@ -2040,6 +2045,11 @@ class Definition(DependzNode):
             No(Binding.array), tries
         )
 
+    @langkit_property(return_type=T.Bool)
+    def solve_allowing_orphans(equation=T.Equation):
+        ignore(Var(Self.set_allow_orphan_relations(True)))
+        return equation.solve
+
     @langkit_property(public=False, return_type=T.Bool)
     def check_domains_internal(expected_domain=T.Term.entity,
                                bindings=Binding.array, tries=T.Int):
@@ -2050,7 +2060,7 @@ class Definition(DependzNode):
         ))
         return term_eq.templates.then(
             lambda templates: (tries != 0) & Try(
-                domain_eq.solve,
+                Self.solve_allowing_orphans(domain_eq),
                 True
             ).then(lambda _: Let(
                 lambda instances=templates.map(

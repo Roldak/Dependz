@@ -61,6 +61,15 @@ begin
       Image (S) & "$" & Int_Str (2 .. Int_Str'Last));
 end P_Concat_Symbol_And_Integer;
 
+function P_Set_Allow_Orphan_Relations
+  (Node : access Bare_Dependz_Node_Type'Class;
+   Do_Allow : Boolean) return Boolean is
+   Old : Boolean := Langkit_Support.Adalog.Allow_Orphan_Relations;
+begin
+   Langkit_Support.Adalog.Allow_Orphan_Relations := Do_Allow;
+   return Old;
+end P_Set_Allow_Orphan_Relations;
+
 function P_Dump_Mmz_Map
   (Node : access Bare_Dependz_Node_Type'Class) return Boolean
 is

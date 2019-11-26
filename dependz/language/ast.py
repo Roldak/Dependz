@@ -416,14 +416,28 @@ class Term(DependzNode):
     @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
                       dynamic_vars=[unification_context])
     def first_order_flexible_semirigid_equation(other=T.Term):
-        self_var = Var(
-            unification_context.vars.elem(Self.cast(Identifier).sym)
-        )
+        self_sym = Var(Self.cast(Identifier).sym)
+        self_var = Var(unification_context.vars.elem(self_sym))
+        tmp = Var(unification_context.vars.elem(
+            Self.unique_fresh_symbol("tmp")
+        ))
 
         return UnifyEquation.new(
-            eq=And(
-                Predicate(Term.unifies_with, self_var, other),
-                LogicTrue()  # Bind(vars_in_flexible_eq, Self, conv_prop=...)
+            eq=Or(
+                And(
+                    Bind(tmp, other.as_bare_entity),
+                    Bind(tmp, self_var,
+                         conv_prop=Term.solve_time_substituted_entity,
+                         eq_prop=Term.equivalent_entities)
+                ),
+                And(
+                    Predicate(Term.unifies_with, self_var, other),
+                    other.free_symbols.filter(
+                        lambda s: unification_context.symbols.contains(s)
+                    ).logic_all(
+                        lambda s: Self.extract_equation(other, self_sym, s)
+                    )
+                )
             ),
             renamings=No(Renaming.array)
         )

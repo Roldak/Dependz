@@ -307,6 +307,11 @@ class Term(DependzNode):
 
         return Self.substitute_all(substs).normalize
 
+    @langkit_property(return_type=T.Term.entity,
+                      dynamic_vars=[unification_context])
+    def solve_time_substituted_entity():
+        return Entity.solve_time_substitution.as_bare_entity
+
     @langkit_property(return_type=T.Bool,
                       dynamic_vars=[unification_context],
                       activate_tracing=True)
@@ -370,6 +375,7 @@ class Term(DependzNode):
             eq=Bind(
                 self_var,
                 other.as_bare_entity,
+                conv_prop=Term.solve_time_substituted_entity,
                 eq_prop=Term.equivalent_entities
             ),
             renamings=No(Renaming.array)

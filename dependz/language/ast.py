@@ -740,9 +740,9 @@ class Term(DependzNode):
 
         return UnifyEquation.new(
             eq=Or(
-                imitate,
                 project,
-                ignore
+                ignore,
+                imitate,
             ),
             renamings=No(Renaming.array)
         )

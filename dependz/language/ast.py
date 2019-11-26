@@ -725,9 +725,16 @@ class Term(DependzNode):
 
         ignore = Var(ho_unification_context.bind(
             ho_ctx,
-            Predicate(
-                Term.higher_order_check_current_solution,
-                metavar
+            And(
+                Predicate(
+                    Term.higher_order_check_current_solution,
+                    metavar
+                ),
+                res.free_symbols.filter(
+                    lambda s: unification_context.symbols.contains(s)
+                ).logic_all(
+                    lambda s: Self.extract_equation(res, ho_sym, s)
+                )
             )
         ))
 

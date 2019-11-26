@@ -38,5 +38,5 @@ replace : Eq a b -> Eq (P a) c -> Eq (P b) c
 test_plus_reduces_Z : n:Nat -> Eq n (add n Z)
 test_plus_reduces_Z = elim_nat Refl (\k. cong (test_plus_reduces_Z k))
 
-test_plus_reduces_S : n:Nat -> m:Nat -> Eq (S (add n m)) (add n (S m))
+test_plus_reduces_S : n:Nat -> m:Nat -> Eq (add (S n) m) (add n (S m))
 test_plus_reduces_S = elim_nat (\m. Refl) (\k.\m. cong (test_plus_reduces_S k m))

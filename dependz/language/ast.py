@@ -418,6 +418,11 @@ class Term(DependzNode):
                 )
             )
 
+        def is_metavar(term):
+            return term.cast(Identifier).then(
+                lambda id: unification_context.symbols.contains(id.sym)
+            )
+
         updated_ctx = Var(UnificationContext.new(
             vars=unification_context.vars,
             symbols=unification_context.symbols,
@@ -466,18 +471,43 @@ class Term(DependzNode):
             lambda ar=Arrow: unify_case(
                 Arrow,
                 lambda oar: Cond(
-                    Or(
-                        And(ar.binder.is_null, oar.binder.is_null),
-                        Or(
-                            ar.binder.is_null
-                            & Not(oar.has_constraining_binder),
-                            oar.binder.is_null
-                            & Not(ar.has_constraining_binder)
+                    And(ar.binder.is_null, oar.binder.is_null),
+                    combine(ar.lhs, oar.lhs, ar.rhs, oar.rhs),
+
+                    Or(ar.binder.is_null & Not(oar.has_constraining_binder),
+                       oar.binder.is_null & Not(ar.has_constraining_binder)),
+                    Let(
+                        lambda
+                        res=combine(ar.lhs, oar.lhs, ar.rhs, oar.rhs),
+                        unused=Self.make_ident(
+                            Self.free_fresh_symbol("unused")
+                        ):
+
+                        UnifyEquation.new(
+                            eq=And(
+                                res.eq,
+                                Cond(
+                                    ar.binder.is_null & is_metavar(oar.binder),
+                                    Bind(
+                                        unification_context.vars.elem(
+                                            oar.binder.cast(Identifier).sym
+                                        ),
+                                        unused.as_bare_entity
+                                    ),
+
+                                    oar.binder.is_null & is_metavar(ar.binder),
+                                    Bind(
+                                        unification_context.vars.elem(
+                                            ar.binder.cast(Identifier).sym
+                                        ),
+                                        unused.as_bare_entity
+                                    ),
+
+                                    LogicTrue()
+                                )
+                            ),
+                            renamings=res.renamings
                         )
-                    ),
-                    combine(
-                        ar.lhs, oar.lhs,
-                        ar.rhs, oar.rhs
                     ),
 
                     Or(ar.binder.is_null, oar.binder.is_null),

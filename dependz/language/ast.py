@@ -67,6 +67,12 @@ class HigherOrderUnificationContext(Struct):
     res = UserField(type=T.Term)
 
 
+class ExtractionContext(Struct):
+    target = UserField(type=T.Symbol)
+    first_context = UserField(type=T.Term)
+    second_context = UserField(type=T.Term)
+
+
 class ConstrainedTerm(Struct):
     term = UserField(type=T.Term)
     constraints = UserField(type=Substitution.array)
@@ -98,6 +104,10 @@ unification_context = DynamicVariable(
 
 ho_unification_context = DynamicVariable(
     "ho_unification_context", type=HigherOrderUnificationContext
+)
+
+extraction_context = DynamicVariable(
+    "extraction_context", type=ExtractionContext
 )
 
 synthesis_context = DynamicVariable(
@@ -327,6 +337,56 @@ class Term(DependzNode):
                 ): True
             ),
             False
+        )
+
+    @langkit_property(return_type=T.Term.entity,
+                      dynamic_vars=[unification_context, extraction_context],
+                      activate_tracing=True)
+    def extract_value():
+        first_term = Var(
+            extraction_context.first_context.solve_time_substitution.normalize
+        )
+        second_term = Var(extraction_context.second_context.normalize)
+
+        original = Var(unification_context.vars.elem(
+            extraction_context.target
+        ).get_value._.cast_or_raise(Term))
+
+        return If(
+            Not(original.is_null),
+            original,
+            Try(
+                Let(
+                    lambda substs=first_term.unify(
+                        second_term,
+                        unification_context.symbols,
+                        allow_incomplete=True
+                    ): substs.find(
+                        lambda s: s.from_symbol == extraction_context.target
+                    ).then(
+                        lambda s: s.to_term.normalize.as_entity,
+                        default_val=No(Term.entity)
+                    )
+                ),
+                No(Term.entity)
+            )
+        )
+
+    @langkit_property(return_type=T.Equation,
+                      dynamic_vars=[unification_context])
+    def extract_equation(other=T.Term, source=T.Symbol, target=T.Symbol):
+        return extraction_context.bind(
+            ExtractionContext.new(
+                target=target,
+                first_context=Self,
+                second_context=other
+            ),
+            Bind(
+                unification_context.vars.elem(source),
+                unification_context.vars.elem(target),
+                conv_prop=Term.extract_value,
+                eq_prop=Term.equivalent_entities
+            )
         )
 
     @langkit_property(return_type=UnifyEquation, uses_entity_info=False,

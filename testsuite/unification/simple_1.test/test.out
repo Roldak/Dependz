@@ -1,2 +1,2 @@
 Unification success:
-  P -> ((elim_nat A) (\p. (((elim_nat B) (\q. C)) p)))
+  P -> (match (((case Z) A) ((case S) (match (((case Z) B) ((case S) (\q. C)))))))

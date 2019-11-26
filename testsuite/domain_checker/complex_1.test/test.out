@@ -1,0 +1,48 @@
+test_1: Success
+  <Apply test.dep:19:10-19:53>: (a:Nat -> ((match (((case Z) A) ((case S) (match (((case Z) B) ((case S) (\c. C))))))) a))
+  <Apply test.dep:19:10-19:22>: ((k:Nat -> ((match (((case Z) B) ((case S) (\c. C)))) k)) -> (a:Nat -> ((match (((case Z) A) ((case S) (match (((case Z) B) ((case S) (\c. C))))))) a)))
+  <SourceId test.dep:19:10-19:18>: (A -> ((k:Nat -> ((match (((case Z) B) ((case S) (\c. C)))) k)) -> (a:Nat -> ((match (((case Z) A) ((case S) (match (((case Z) B) ((case S) (\c. C))))))) a))))
+  <SourceId test.dep:19:19-19:22>: A
+  <Abstraction test.dep:19:24-19:52>: (k:Nat -> ((match (((case Z) B) ((case S) (\c. C)))) k))
+  <SourceId test.dep:19:25-19:26>: Nat
+  <Apply test.dep:19:28-19:52>: ((match (((case Z) B) ((case S) (\c. C)))) k)
+  <Apply test.dep:19:28-19:50>: (k:Nat -> ((match (((case Z) B) ((case S) (\c. C)))) k))
+  <Apply test.dep:19:28-19:40>: ((Nat -> C) -> (k:Nat -> ((match (((case Z) B) ((case S) (\c. C)))) k)))
+  <SourceId test.dep:19:28-19:36>: (B -> ((Nat -> C) -> (k:Nat -> ((match (((case Z) B) ((case S) (\c. C)))) k))))
+  <SourceId test.dep:19:37-19:40>: B
+  <Abstraction test.dep:19:42-19:49>: (Nat -> C)
+  <SourceId test.dep:19:43-19:44>: Nat
+  <SourceId test.dep:19:46-19:49>: C
+  <SourceId test.dep:19:51-19:52>: Nat
+test_2: Success
+  <Abstraction test.dep:25:10-25:99>: (m:Nat -> (WrappedNat m))
+  <SourceId test.dep:25:11-25:12>: Nat
+  <Apply test.dep:25:14-25:99>: (WrappedNat m)
+  <Apply test.dep:25:14-25:97>: (m:Nat -> (WrappedNat m))
+  <Apply test.dep:25:14-25:36>: ((k:Nat -> (WrappedNat (S k))) -> (m:Nat -> (WrappedNat m)))
+  <SourceId test.dep:25:14-25:22>: ((WrappedNat Z) -> ((k:Nat -> (WrappedNat (S k))) -> (m:Nat -> (WrappedNat m))))
+  <Apply test.dep:25:24-25:35>: (WrappedNat Z)
+  <SourceId test.dep:25:24-25:33>: (Z:Nat -> (WrappedNat Z))
+  <SourceId test.dep:25:34-25:35>: Nat
+  <Abstraction test.dep:25:38-25:96>: (k:Nat -> (WrappedNat (S k)))
+  <SourceId test.dep:25:39-25:40>: Nat
+  <Apply test.dep:25:42-25:96>: (WrappedNat (S k))
+  <Apply test.dep:25:42-25:94>: (k:Nat -> (WrappedNat (S k)))
+  <Apply test.dep:25:42-25:68>: ((k:Nat -> (WrappedNat (S (S k)))) -> (k:Nat -> (WrappedNat (S k))))
+  <SourceId test.dep:25:42-25:50>: ((WrappedNat (S Z)) -> ((k:Nat -> (WrappedNat (S (S k)))) -> (k:Nat -> (WrappedNat (S k)))))
+  <Apply test.dep:25:52-25:67>: (WrappedNat (S Z))
+  <SourceId test.dep:25:52-25:61>: ((S Z):Nat -> (WrappedNat (S Z)))
+  <Apply test.dep:25:63-25:66>: Nat
+  <SourceId test.dep:25:63-25:64>: (Nat -> Nat)
+  <SourceId test.dep:25:65-25:66>: Nat
+  <Abstraction test.dep:25:70-25:93>: (k:Nat -> (WrappedNat (S (S k))))
+  <SourceId test.dep:25:71-25:72>: Nat
+  <Apply test.dep:25:74-25:93>: (WrappedNat (S (S k)))
+  <SourceId test.dep:25:74-25:83>: ((S (S k)):Nat -> (WrappedNat (S (S k))))
+  <Apply test.dep:25:85-25:92>: Nat
+  <SourceId test.dep:25:85-25:86>: (Nat -> Nat)
+  <Apply test.dep:25:88-25:91>: Nat
+  <SourceId test.dep:25:88-25:89>: (Nat -> Nat)
+  <SourceId test.dep:25:90-25:91>: Nat
+  <SourceId test.dep:25:95-25:96>: Nat
+  <SourceId test.dep:25:98-25:99>: Nat

@@ -50,7 +50,7 @@ test_complex_project = elim_w (foo Nil_T1_Vec Nil_T2_Vec)
 bar : x -> y -> P x -> P y -> Witness P
 
 test_complex_imitate : Type
-test_complex_imitate = elim_w (bar T1_Val_1 T1_Val_1 T1_Val_1 T1_Val_1)
+test_complex_imitate = elim_w (bar T1_Val_1 T2_Val_1 T1_Val_1 T1_Val_1)
 
 test_complex_project_2 : Type
 test_complex_project_2 = elim_w (bar T1_Val_1 T2_Val_1 T1_Val_1 T2_Val_1)

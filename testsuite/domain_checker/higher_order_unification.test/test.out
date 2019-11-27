@@ -28,10 +28,10 @@ test_complex_imitate: Success
   <Apply test.dep:53:32-53:71>: (Witness (\x. Nat))
   <Apply test.dep:53:32-53:62>: (Nat -> (Witness (\x. Nat)))
   <Apply test.dep:53:32-53:53>: (Nat -> (Nat -> (Witness (\x. Nat))))
-  <Apply test.dep:53:32-53:44>: (Nat -> (Nat -> (Nat -> (Witness (\x. Nat)))))
-  <SourceId test.dep:53:32-53:35>: (Nat -> (Nat -> (Nat -> (Nat -> (Witness (\x. Nat))))))
+  <Apply test.dep:53:32-53:44>: (((Vec Nat) Z) -> (Nat -> (Nat -> (Witness (\x. Nat)))))
+  <SourceId test.dep:53:32-53:35>: (Nat -> (((Vec Nat) Z) -> (Nat -> (Nat -> (Witness (\x. Nat))))))
   <SourceId test.dep:53:36-53:44>: Nat
-  <SourceId test.dep:53:45-53:53>: Nat
+  <SourceId test.dep:53:45-53:53>: ((Vec Nat) Z)
   <SourceId test.dep:53:54-53:62>: Nat
   <SourceId test.dep:53:63-53:71>: Nat
 test_complex_project_2: Success

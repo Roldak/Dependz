@@ -141,9 +141,9 @@ class DependzNode(ASTNode):
     def make_logic_var_array():
         return LogicVarArray.new()
 
-    @langkit_property(memoized=True, return_type=T.FreshId)
+    @langkit_property(memoized=True, return_type=T.SyntheticId)
     def make_ident_from_self(name=T.Symbol):
-        return FreshId.new(name=name)
+        return SyntheticId.new(name=name)
 
     @langkit_property(memoized=True, return_type=T.SyntheticApply)
     def make_apply_from_self(t1=T.Term, t2=T.Term):
@@ -1987,15 +1987,15 @@ class Identifier(Term):
         return Self.node_env.get_first(Self.sym).cast(Introduction)
 
 
-@synthetic
-class FreshId(Identifier):
-    name = UserField(type=T.Symbol)
-    sym = Property(Self.name)
-
-
 class SourceId(Identifier):
     token_node = True
     sym = Property(Self.symbol)
+
+
+@synthetic
+class SyntheticId(Identifier):
+    name = UserField(type=T.Symbol)
+    sym = Property(Self.name)
 
 
 class Apply(Term):

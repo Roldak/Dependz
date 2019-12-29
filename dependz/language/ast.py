@@ -843,7 +843,7 @@ class Term(DependzNode):
             lambda _: No(Term.array)
         )
 
-    @langkit_property(return_type=T.Bool)
+    @langkit_property(return_type=T.Bool, public=True)
     def is_call_to(sym=T.Symbol, left_args=T.Int):
         return Self.match(
             lambda i=Identifier: (i.sym == sym) & (left_args == 0),
@@ -2078,6 +2078,12 @@ class Apply(Term):
                 default_val=other
             ),
             Self.rhs
+        )
+
+    @langkit_property(return_type=Term.entity.array, public=True)
+    def as_term_array():
+        return Self.left_most_term.as_bare_entity.singleton.concat(
+            Self.call_args.map(lambda x: x.as_bare_entity)
         )
 
 

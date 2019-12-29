@@ -1944,11 +1944,11 @@ class Term(DependzNode):
         )
 
     @langkit_property(public=False, return_type=T.Bool)
-    def check_domains_internal(expected_domain=T.Term.entity,
+    def check_domains_internal(expected_domain=T.Term,
                                bindings=Binding.array, tries=T.Int):
         term_eq = Var(Self.domain_equation(bindings))
         domain_eq = Var(And(
-            Bind(Self.domain_var, expected_domain,
+            Bind(Self.domain_var, expected_domain.as_bare_entity,
                  eq_prop=Term.equivalent_entities),
             term_eq.eq
         ))
@@ -1962,7 +1962,7 @@ class Term(DependzNode):
                 ):
 
                 Self.instantiate_templates(
-                    expected_domain.node,
+                    expected_domain,
                     instances,
                     No(Substitution.array)
                 ).then(lambda result: Self.check_domains_internal(
@@ -2225,7 +2225,7 @@ class Definition(DependzNode):
     @langkit_property(public=True, return_type=T.Bool)
     def check_domains(tries=(T.Int, -1)):
         return Self.term.check_domains_internal(
-            Self.ident.intro.term.normalized_entities,
+            Self.ident.intro.term.normalize,
             No(Binding.array), tries
         )
 

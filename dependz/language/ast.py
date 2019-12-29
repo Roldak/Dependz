@@ -1149,6 +1149,22 @@ class Term(DependzNode):
             )
         )
 
+    @langkit_property(return_type=T.Term)
+    def sanitize_synthesization(from_term=T.Term):
+        arrow_type = Var(from_term.cast(Arrow))
+        binder = Var(arrow_type._.binder.cast(Identifier))
+        abs = Var(Self.cast(Abstraction))
+        return If(
+            Not(abs.is_null) & Not(binder.is_null),
+            Self.make_abstraction(
+                binder,
+                abs.term.substitute(
+                    abs.ident.sym, binder
+                ).sanitize_synthesization(arrow_type.rhs)
+            ),
+            Self
+        )
+
     @langkit_property(public=True, return_type=T.Term)
     def synthesize(origin=(T.Introduction, No(T.Introduction))):
         return synthesis_context.bind(
@@ -1160,7 +1176,7 @@ class Term(DependzNode):
                 origin,
                 10
             )
-        )
+        )._.sanitize_synthesization(Self)
 
     @langkit_property(public=True, return_type=T.Symbol.array, memoized=True)
     def free_symbols(deep=(T.Bool, False)):

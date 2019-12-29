@@ -190,6 +190,11 @@ class DependzNode(ASTNode):
     def set_allow_orphan_relations(do_allow=T.Bool):
         pass
 
+    @langkit_property(return_type=T.Bool)
+    def solve_allowing_orphans(equation=T.Equation):
+        ignore(Var(Self.set_allow_orphan_relations(True)))
+        return equation.solve
+
     @langkit_property(return_type=T.DependzNode, activate_tracing=True)
     def here():
         return Self
@@ -1938,6 +1943,58 @@ class Term(DependzNode):
             default_val=templated_result
         )
 
+    @langkit_property(public=False, return_type=T.Bool)
+    def check_domains_internal(expected_domain=T.Term.entity,
+                               bindings=Binding.array, tries=T.Int):
+        term_eq = Var(Self.domain_equation(bindings))
+        domain_eq = Var(And(
+            Bind(Self.domain_var, expected_domain,
+                 eq_prop=Term.equivalent_entities),
+            term_eq.eq
+        ))
+        return term_eq.templates.then(
+            lambda templates: (tries != 0) & Try(
+                Self.solve_allowing_orphans(domain_eq),
+                True
+            ).then(lambda _: Let(
+                lambda instances=templates.map(
+                    lambda t: t.intro.as_template(t)
+                ):
+
+                Self.instantiate_templates(
+                    expected_domain.node,
+                    instances,
+                    No(Substitution.array)
+                ).then(lambda result: Self.check_domains_internal(
+                    expected_domain,
+                    Let(
+                        lambda substs=Self.unify_all(
+                            result.equations,
+                            instances.mapcat(
+                                lambda i: i.new_symbols
+                            ).concat(
+                                result.new_symbols
+                            )
+                        ): result.bindings.map(
+                            lambda b: Binding.new(
+                                target=b.target,
+                                domain_val=
+                                b.domain_val.substitute_all(substs).normalize
+                            )
+                        ).filter(
+                            lambda b: b.domain_val.free_symbols.all(
+                                lambda sym: Not(instances.any(
+                                    lambda i: i.new_symbols.contains(sym)
+                                ))
+                            )
+                        )
+                    ),
+                    tries - 1
+                ))
+            )),
+            default_val=domain_eq.solve
+        )
+
     @langkit_property(return_type=T.Term, public=True)
     def domain_val():
         return Self.domain_var.get_value._.node.cast_or_raise(Term)
@@ -2161,66 +2218,9 @@ class Definition(DependzNode):
 
     @langkit_property(public=True, return_type=T.Bool)
     def check_domains(tries=(T.Int, -1)):
-        return Self.check_domains_internal(
+        return Self.term.check_domains_internal(
             Self.ident.intro.term.normalized_entities,
             No(Binding.array), tries
-        )
-
-    @langkit_property(return_type=T.Bool)
-    def solve_allowing_orphans(equation=T.Equation):
-        ignore(Var(Self.set_allow_orphan_relations(True)))
-        return equation.solve
-
-    @langkit_property(public=False, return_type=T.Bool)
-    def check_domains_internal(expected_domain=T.Term.entity,
-                               bindings=Binding.array, tries=T.Int):
-        term_eq = Var(Self.term.domain_equation(bindings))
-        domain_eq = Var(And(
-            Bind(Self.term.domain_var, expected_domain,
-                 eq_prop=Term.equivalent_entities),
-            term_eq.eq
-        ))
-        return term_eq.templates.then(
-            lambda templates: (tries != 0) & Try(
-                Self.solve_allowing_orphans(domain_eq),
-                True
-            ).then(lambda _: Let(
-                lambda instances=templates.map(
-                    lambda t: t.intro.as_template(t)
-                ):
-
-                Self.term.instantiate_templates(
-                    expected_domain.node,
-                    instances,
-                    No(Substitution.array)
-                ).then(lambda result: Self.check_domains_internal(
-                    expected_domain,
-                    Let(
-                        lambda substs=Self.unify_all(
-                            result.equations,
-                            instances.mapcat(
-                                lambda i: i.new_symbols
-                            ).concat(
-                                result.new_symbols
-                            )
-                        ): result.bindings.map(
-                            lambda b: Binding.new(
-                                target=b.target,
-                                domain_val=
-                                b.domain_val.substitute_all(substs).normalize
-                            )
-                        ).filter(
-                            lambda b: b.domain_val.free_symbols.all(
-                                lambda sym: Not(instances.any(
-                                    lambda i: i.new_symbols.contains(sym)
-                                ))
-                            )
-                        )
-                    ),
-                    tries - 1
-                ))
-            )),
-            default_val=domain_eq.solve
         )
 
     env_spec = EnvSpec(

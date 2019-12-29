@@ -906,10 +906,14 @@ class Term(DependzNode):
     @langkit_property(return_type=T.Constructor.array.array)
     def grouped_constructors_impl(constrs=T.Constructor.array, i=T.Int):
         filtered = Var(constrs.filter(
-            lambda c: c.template.instance.param_count == i
+            lambda c:
+            (c.template.instance.param_count +
+             c.template.new_symbols.length) == i
         ))
         not_filtered = Var(constrs.filter(
-            lambda c: c.template.instance.param_count != i
+            lambda c:
+            (c.template.instance.param_count +
+             c.template.new_symbols.length) != i
         ))
         return filtered.singleton.concat(
             not_filtered.then(
@@ -1083,16 +1087,41 @@ class Term(DependzNode):
                 lambda substs=Substitution.new(
                     from_symbol=first_hole.sym,
                     to_term=atp.term
-                ).singleton.concat(c.substs): SynthesizationAttempt.new(
+                ).singleton.concat(c.substs):
+
+                SynthesizationAttempt.new(
                     term=attempt.term.substitute_all(substs, unsafe=True),
-                    holes=attempt.holes.concat(atp.holes).filtermap(
-                        lambda h: SynthesizationHole.new(
-                            sym=h.sym,
-                            domain_val=h.domain_val.substitute_all(substs),
-                            ctx=h.ctx
-                        ),
-                        lambda h: Not(substs.any(
+                    holes=atp.holes.concat(attempt.holes).mapcat(
+                        lambda h: Let(lambda hole_rep=substs.find(
                             lambda s: s.from_symbol == h.sym
+                        ): If(
+                            hole_rep.is_null,
+
+                            SynthesizationHole.new(
+                                sym=h.sym,
+                                domain_val=h.domain_val.substitute_all(substs),
+                                ctx=h.ctx
+                            ).singleton,
+
+                            c.template.new_symbols.filtermap(lambda s: Let(
+                                lambda
+                                exp_dom=h.domain_val.substitute_all(substs),
+                                ocr=hole_rep.to_term.find_occurrences(s).at(0):
+
+                                hole_rep.to_term.check_domains_internal(
+                                    exp_dom, No(Binding.array), -1
+                                ).then(
+                                    lambda _: SynthesizationHole.new(
+                                        sym=s,
+                                        domain_val=ocr._.domain_val,
+                                        ctx=h.ctx
+                                    ),
+                                    default_val=PropertyError(
+                                        SynthesizationHole,
+                                        "Could not type new hole"
+                                    )
+                                )
+                            ), lambda s: hole_rep.to_term.is_free(s))
                         ))
                     )
                 )

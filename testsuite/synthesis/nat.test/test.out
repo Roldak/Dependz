@@ -1,0 +1,12 @@
+test_1: Success
+  test_1 = (Lt_M Lt_S)
+test_2: Success
+  test_2 = ((DPMake (S (S (S Z)))) Lt_S)
+test_3: Success
+  test_3 = (\x. ((DPMake (S x)) Lt_S))
+test_4: Success
+  test_4 = (\x. ((DPMake ((add (S x)) (S x))) ((PMake Lt_add_2) Lt_add_1)))
+test_5: Success
+  test_5 = (\x. ((DPMake ((add x) (S (S x)))) ((PMake Lt_add_2) Lt_add_1)))
+test_6: Success
+  test_6 = (\x. (\y. ((DPMake ((add y) (S x))) ((PMake Lt_add_2) Lt_add_1))))

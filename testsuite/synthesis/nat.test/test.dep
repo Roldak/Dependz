@@ -1,0 +1,36 @@
+Type : Type
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+add : Nat -> Nat -> Nat
+
+Lt : Nat -> Nat -> Type
+Lt_S : Lt x (S x)
+Lt_M : Lt x y -> Lt x (S y)
+Lt_add_1 : Lt x (add x (S y))
+Lt_add_2 : Lt x (add y (S x))
+
+test_1 : Lt (S (S (S Z))) (S (S (S (S (S Z)))))
+test_1 = hole
+
+Pair : Type -> Type -> Type
+PMake : a -> b -> Pair a b
+
+DPair : a:t -> P : (a -> q) -> Type
+DPMake : x:a -> P x -> DPair a P
+
+test_2 : DPair Nat (Lt (S (S Z)))
+test_2 = hole
+
+test_3 : x:Nat -> DPair Nat (Lt x)
+test_3 = hole
+
+test_4 : x:Nat -> DPair Nat (\y. Pair (Lt x y) (Lt (S x) y))
+test_4 = hole
+
+test_5 : x:Nat -> DPair Nat (\y. Pair (Lt (S x) y) (Lt x y))
+test_5 = hole
+
+test_6 : x:Nat -> y:Nat -> DPair Nat (\z. Pair (Lt x z) (Lt y z))
+test_6 = hole

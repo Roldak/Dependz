@@ -137,6 +137,10 @@ class DependzNode(ASTNode):
                    t3=(T.Term, No(T.Term))):
         return Self.unit.root.make_arrow_from_self(t1, t2, t3)
 
+    @langkit_property()
+    def make_introduction(name=T.Identifier, dom=T.Term):
+        return Self.unit.root.make_introduction_from_self(name, dom)
+
     @langkit_property(return_type=T.LogicVarArray, memoized=True)
     def make_logic_var_array():
         return LogicVarArray.new()
@@ -157,6 +161,10 @@ class DependzNode(ASTNode):
     def make_arrow_from_self(t1=T.Term, t2=T.Term,
                              t3=(T.Term, No(T.Term))):
         return SyntheticArrow.new(lhs=t1, rhs=t2, binder=t3)
+
+    @langkit_property(memoized=True, return_type=T.SyntheticIntroduction)
+    def make_introduction_from_self(name=T.Identifier, dom=T.Term):
+        return SyntheticIntroduction.new(ident=name, term=dom)
 
     @langkit_property(return_type=T.Symbol)
     def unique_fresh_symbol(prefix=T.Symbol):
@@ -2234,7 +2242,7 @@ class Introduction(DependzNode):
     """
     Identifer : Term
     """
-    ident = Field(type=SourceId)
+    ident = Field(type=Identifier)
     term = Field(type=Term)
 
     @langkit_property(public=True, return_type=T.Definition.entity,
@@ -2263,6 +2271,11 @@ class Introduction(DependzNode):
         add_to_env_kv(Self.ident.sym, Self),
         add_env()
     )
+
+
+@synthetic
+class SyntheticIntroduction(Introduction):
+    pass
 
 
 class Definition(DependzNode):

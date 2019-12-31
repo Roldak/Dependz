@@ -1071,14 +1071,17 @@ class Term(DependzNode):
                       activate_tracing=True)
     def synthesize_attempt(attempt=SynthesizationAttempt,
                            origin=T.Introduction):
-        hole_syms = Var(attempt.holes.map(lambda h: h.sym))
         first_hole = Var(attempt.holes.at(0))
+        free_syms = Var(first_hole.domain_val.free_symbols.filter(
+            lambda s: Not(first_hole.ctx.intros.contains(s))
+        ))
 
         dom = Var(first_hole.domain_val)
 
         constrs = Var(
-            first_hole.domain_val.synthesizable_constructors(hole_syms)
+            first_hole.domain_val.synthesizable_constructors(free_syms)
         )
+
         return synthesis_context.bind(first_hole.ctx, constrs.map(
             lambda c: dom.synthesize_apply(
                 c.template.origin,

@@ -868,12 +868,11 @@ class Term(DependzNode):
 
     @langkit_property(return_type=T.Constructor.array,
                       activate_tracing=True)
-    def constructors_impl(generics=T.Symbol.array):
-        constrs = Var(Self.unit.root.cast(Program).all_constructors.map(
+    def constructors_impl(constructors=T.Introduction.array,
+                          generics=T.Symbol.array):
+        return constructors.map(
             lambda c: c.as_template(c.ident)
-        ))
-
-        return constrs.mapcat(
+        ).mapcat(
             lambda c: Let(
                 lambda inst=c.instance.final_result_domain:
 
@@ -922,9 +921,10 @@ class Term(DependzNode):
         )
 
     @langkit_property(return_type=T.Constructor.array.array)
-    def grouped_constructors(generics=T.Symbol.array):
+    def grouped_constructors(constructors=T.Introduction.array,
+                             generics=T.Symbol.array):
         return Self.grouped_constructors_impl(
-            Self.constructors_impl(generics), 0
+            Self.constructors_impl(constructors, generics), 0
         )
 
     @langkit_property(public=True, return_type=T.Term.entity.array)
@@ -942,7 +942,9 @@ class Term(DependzNode):
             True
         )))
 
-        return normed.constructors_impl(generics).map(
+        intros = Var(Self.unit.root.cast(Program).all_constructors)
+
+        return normed.constructors_impl(intros, generics).map(
             lambda c: c.template.origin.as_bare_entity
         )
 
@@ -1039,9 +1041,12 @@ class Term(DependzNode):
             )
         )
 
-    @langkit_property(return_type=Constructor.array)
+    @langkit_property(return_type=Constructor.array,
+                      dynamic_vars=[synthesis_context])
     def synthesizable_constructors(generics=T.Symbol.array):
-        return Self.grouped_constructors(generics).mapcat(
+        intros = Var(Self.unit.root.cast(Program).all_constructors)
+
+        return Self.grouped_constructors(intros, generics).mapcat(
             lambda constrs: constrs
         )
 
@@ -1078,9 +1083,10 @@ class Term(DependzNode):
 
         dom = Var(first_hole.domain_val)
 
-        constrs = Var(
+        constrs = Var(synthesis_context.bind(
+            first_hole.ctx,
             first_hole.domain_val.synthesizable_constructors(free_syms)
-        )
+        ))
 
         return synthesis_context.bind(first_hole.ctx, constrs.map(
             lambda c: dom.synthesize_apply(

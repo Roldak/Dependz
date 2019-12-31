@@ -1,0 +1,2 @@
+test_1: Success
+  test_1 = (\x. ((Moved ((Moved x) A_B)) B_C))

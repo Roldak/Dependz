@@ -1,0 +1,16 @@
+Type : Type
+
+Slot : Type
+A : Slot
+B : Slot
+C : Slot
+
+Link : Slot -> Slot -> Type
+A_B : Link A B
+B_C : Link B C
+
+Is_At : Slot -> Type
+Moved : Is_At x -> Link x y -> Is_At y
+
+test_1 : Is_At A -> Is_At C
+test_1 = hole

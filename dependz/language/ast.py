@@ -84,7 +84,7 @@ class Constructor(Struct):
 
 
 class SynthesisContext(Struct):
-    intros = UserField(type=T.Symbol.array)
+    intros = UserField(type=T.Introduction.array)
 
 
 class SynthesizationHole(Struct):
@@ -981,7 +981,11 @@ class Term(DependzNode):
         ).then(
             lambda rhs: synthesis_context.bind(
                 SynthesisContext.new(
-                    intros=synthesis_context.intros.concat(sym.singleton)
+                    intros=synthesis_context.intros.concat(
+                        Self.make_introduction(
+                            name=id, dom=ar.lhs
+                        ).cast(Introduction).singleton
+                    )
                 ),
                 rhs.synthesize_impl
             )
@@ -999,7 +1003,9 @@ class Term(DependzNode):
 
         is_introduced = Var(binder.then(
             lambda b: b.free_symbols.all(
-                lambda s: synthesis_context.intros.contains(s)
+                lambda s: synthesis_context.intros.any(
+                    lambda i: i.ident.sym == s
+                )
             )
         ))
 
@@ -1052,7 +1058,10 @@ class Term(DependzNode):
     @langkit_property(return_type=Constructor.array,
                       dynamic_vars=[synthesis_context])
     def synthesizable_constructors(generics=T.Symbol.array):
-        intros = Var(Self.unit.root.cast(Program).all_constructors)
+        intros = Var(
+            Self.unit.root.cast(Program).all_constructors
+            .concat(synthesis_context.intros)
+        )
 
         return Self.grouped_constructors(intros, generics).mapcat(
             lambda constrs: constrs
@@ -1086,7 +1095,9 @@ class Term(DependzNode):
                            origin=T.Introduction):
         first_hole = Var(attempt.holes.at(0))
         free_syms = Var(first_hole.domain_val.free_symbols.filter(
-            lambda s: Not(first_hole.ctx.intros.contains(s))
+            lambda s: Not(first_hole.ctx.intros.any(
+                lambda i: i.ident.sym == s
+            ))
         ))
 
         dom = Var(first_hole.domain_val)
@@ -1186,7 +1197,7 @@ class Term(DependzNode):
     def synthesize(origin=(T.Introduction, No(T.Introduction))):
         return synthesis_context.bind(
             SynthesisContext.new(
-                intros=No(Symbol.array)
+                intros=No(Introduction.array)
             ),
             Self.synthesize_breadth_first_search(
                 Self.synthesize_impl.singleton,

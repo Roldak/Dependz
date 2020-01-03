@@ -1,0 +1,2 @@
+test_empty_vec: Success
+  test_empty_vec = (\n. (\rec. (((elim_nat Nil) (\x. (\y. ((Cons Z) ((rec x) y))))) n)))

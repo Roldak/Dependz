@@ -1,0 +1,19 @@
+Type : Type
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+Eq : t -> t -> Type
+Refl : Eq x x
+
+Vec : Type -> Nat -> Type
+Nil : Vec t Z
+Cons : t -> Vec t n -> Vec t (S n)
+
+Lt : Nat -> Nat -> Type
+
+elim_nat : P Z -> (k:Nat -> Lt k x -> P (S k)) -> x:Nat -> P x
+
+test_empty_vec : n:Nat -> rec:(m:Nat -> Lt m n -> Vec Nat m) -> Vec Nat n
+test_empty_vec = hole
+

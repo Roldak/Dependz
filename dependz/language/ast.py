@@ -2280,7 +2280,9 @@ class Introduction(DependzNode):
 
 @synthetic
 class SyntheticIntroduction(Introduction):
-    pass
+    @langkit_property()
+    def generic_formals():
+        return No(Symbol.array)
 
 
 class Definition(DependzNode):

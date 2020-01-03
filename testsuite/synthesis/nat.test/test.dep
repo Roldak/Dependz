@@ -34,3 +34,6 @@ test_5 = hole
 
 test_6 : x:Nat -> y:Nat -> DPair Nat (\z. Pair (Lt x z) (Lt y z))
 test_6 = hole
+
+test_7 : x:Nat -> Lt Z x -> DPair Nat (\z. Lt z x)
+test_7 = hole

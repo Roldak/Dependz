@@ -10,3 +10,5 @@ test_5: Success
   test_5 = (\x. ((DPMake ((add x) (S (S x)))) ((PMake Lt_add_2) Lt_add_1)))
 test_6: Success
   test_6 = (\x. (\y. ((DPMake ((add y) (S x))) ((PMake Lt_add_2) Lt_add_1))))
+test_7: Success
+  test_7 = (\x. (\x. ((DPMake Z) x)))

@@ -1,0 +1,2 @@
+test_inverse: Success
+  test_inverse = (\x. ((PMake (snd x)) (fst x)))

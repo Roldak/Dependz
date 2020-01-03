@@ -1,0 +1,15 @@
+Type : Type
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+Pair : Type -> Type -> Type
+PMake : a -> b -> Pair a b
+
+elim_pair : (a -> b -> t) -> Pair a b -> t
+
+DPair : a:t -> P : (a -> q) -> Type
+DPMake : x:a -> P x -> DPair a P
+
+test_inverse : Pair a b -> Pair b a
+test_inverse = hole

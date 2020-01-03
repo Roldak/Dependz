@@ -1,0 +1,2 @@
+test_inverse: Success
+  test_inverse = (\x. ((elim_pair (\x. (\y. ((PMake y) x)))) x))

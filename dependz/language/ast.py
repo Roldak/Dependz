@@ -96,6 +96,7 @@ class SynthesizationHole(Struct):
 class SynthesizationAttempt(Struct):
     term = UserField(type=T.Term)
     holes = UserField(type=SynthesizationHole.array)
+    free_symbols = UserField(type=T.Symbol.array)
 
 
 unification_context = DynamicVariable(
@@ -993,7 +994,8 @@ class Term(DependzNode):
 
         return SynthesizationAttempt.new(
             term=Self.make_abstraction(id, body_attempt.term),
-            holes=body_attempt.holes
+            holes=body_attempt.holes,
+            free_symbols=body_attempt.free_symbols
         )
 
     @langkit_property(return_type=SynthesizationAttempt,
@@ -1013,7 +1015,8 @@ class Term(DependzNode):
             is_introduced,
             SynthesizationAttempt.new(
                 term=binder,
-                holes=No(SynthesizationHole.array)
+                holes=No(SynthesizationHole.array),
+                free_symbols=No(T.Symbol.array)
             ),
             ar.lhs.synthesize_impl
         ))
@@ -1039,6 +1042,7 @@ class Term(DependzNode):
         return SynthesizationAttempt.new(
             term=rec.term,
             holes=rec.holes.concat(arg.holes),
+            free_symbols=rec.free_symbols
         )
 
     @langkit_property(return_type=SynthesizationAttempt,
@@ -1051,7 +1055,8 @@ class Term(DependzNode):
 
             lambda _: SynthesizationAttempt.new(
                 term=built,
-                holes=No(SynthesizationHole.array)
+                holes=No(SynthesizationHole.array),
+                free_symbols=No(T.Symbol.array)
             )
         )
 
@@ -1084,7 +1089,8 @@ class Term(DependzNode):
                         sym=hole.sym,
                         domain_val=other,
                         ctx=synthesis_context
-                    ).singleton
+                    ).singleton,
+                    free_symbols=No(T.Symbol.array)
                 )
             )
         )
@@ -1124,7 +1130,12 @@ class Term(DependzNode):
 
         return SynthesizationAttempt.new(
             term=from_attempt.term.substitute_all(substs, unsafe=True),
-            holes=holes
+            holes=holes,
+            free_symbols=from_attempt.free_symbols.filter(
+                lambda sym: Not(substs.any(lambda s: s.from_symbol == sym))
+            ).concat(
+                constr.template.new_symbols
+            )
         )
 
     @langkit_property(return_type=SynthesizationAttempt.array,
@@ -1132,11 +1143,9 @@ class Term(DependzNode):
     def synthesize_attempt(attempt=SynthesizationAttempt,
                            origin=T.Introduction):
         first_hole = Var(attempt.holes.at(0))
-        free_syms = Var(first_hole.domain_val.free_symbols.filter(
-            lambda s: Not(first_hole.ctx.intros.any(
-                lambda i: i.ident.sym == s
-            ))
-        ))
+        free_syms = Var(
+            attempt.holes.map(lambda h: h.sym).concat(attempt.free_symbols)
+        )
 
         constrs = Var(synthesis_context.bind(
             first_hole.ctx,

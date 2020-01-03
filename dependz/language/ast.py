@@ -85,6 +85,7 @@ class Constructor(Struct):
 
 class SynthesisContext(Struct):
     intros = UserField(type=T.Introduction.array)
+    bound_generics = UserField(type=T.Symbol.array)
 
 
 class SynthesizationHole(Struct):
@@ -139,8 +140,10 @@ class DependzNode(ASTNode):
         return Self.unit.root.make_arrow_from_self(t1, t2, t3)
 
     @langkit_property()
-    def make_introduction(name=T.Identifier, dom=T.Term):
-        return Self.unit.root.make_introduction_from_self(name, dom)
+    def make_nested_intro(name=T.Identifier, dom=T.Term,
+                          bound_generics=T.Symbol.array):
+        return Self.unit.root.make_nested_intro_from_self(name, dom,
+                                                          bound_generics)
 
     @langkit_property(return_type=T.LogicVarArray, memoized=True)
     def make_logic_var_array():
@@ -163,9 +166,11 @@ class DependzNode(ASTNode):
                              t3=(T.Term, No(T.Term))):
         return SyntheticArrow.new(lhs=t1, rhs=t2, binder=t3)
 
-    @langkit_property(memoized=True, return_type=T.SyntheticIntroduction)
-    def make_introduction_from_self(name=T.Identifier, dom=T.Term):
-        return SyntheticIntroduction.new(ident=name, term=dom)
+    @langkit_property(memoized=True, return_type=T.NestedIntroduction)
+    def make_nested_intro_from_self(name=T.Identifier, dom=T.Term,
+                                    bound_generics=T.Symbol.array):
+        return NestedIntroduction.new(ident=name, term=dom,
+                                      bound_generics=bound_generics)
 
     @langkit_property(return_type=T.Symbol)
     def unique_fresh_symbol(prefix=T.Symbol):
@@ -983,10 +988,12 @@ class Term(DependzNode):
             lambda rhs: synthesis_context.bind(
                 SynthesisContext.new(
                     intros=synthesis_context.intros.concat(
-                        Self.make_introduction(
-                            name=id, dom=ar.lhs
+                        Self.make_nested_intro(
+                            name=id, dom=ar.lhs,
+                            bound_generics=synthesis_context.bound_generics
                         ).cast(Introduction).singleton
-                    )
+                    ),
+                    bound_generics=synthesis_context.bound_generics
                 ),
                 rhs.synthesize_impl
             )
@@ -1018,7 +1025,18 @@ class Term(DependzNode):
                 holes=No(SynthesizationHole.array),
                 free_symbols=No(T.Symbol.array)
             ),
-            ar.lhs.synthesize_impl
+            synthesis_context.bind(
+                SynthesisContext.new(
+                    intros=synthesis_context.intros,
+                    bound_generics=synthesis_context.bound_generics.concat(
+                        ar.lhs.free_symbols.filter(
+                            lambda s:
+                            Not(synthesis_context.bound_generics.contains(s))
+                        )
+                    )
+                ),
+                ar.lhs.synthesize_impl
+            )
         ))
 
         new_built = Var(Self.make_apply(built, arg.term))
@@ -1118,11 +1136,13 @@ class Term(DependzNode):
                 domain_val=h.domain_val.substitute_all(substs),
                 ctx=SynthesisContext.new(
                     intros=h.ctx.intros.map(
-                        lambda i: Self.make_introduction(
+                        lambda i: Self.make_nested_intro(
                             name=i.ident,
-                            dom=i.term.substitute_all(substs)
+                            dom=i.term.substitute_all(substs),
+                            bound_generics=h.ctx.bound_generics
                         ).cast(Introduction)
-                    )
+                    ),
+                    bound_generics=h.ctx.bound_generics
                 )
             ),
             lambda h: Not(substs.any(lambda s: s.from_symbol == h.sym))
@@ -1200,7 +1220,8 @@ class Term(DependzNode):
     def synthesize(origin=(T.Introduction, No(T.Introduction))):
         return synthesis_context.bind(
             SynthesisContext.new(
-                intros=No(Introduction.array)
+                intros=No(Introduction.array),
+                bound_generics=Self.free_symbols
             ),
             Self.synthesize_breadth_first_search(
                 Self.synthesize_impl.singleton,
@@ -2288,10 +2309,14 @@ class Introduction(DependzNode):
 
 
 @synthetic
-class SyntheticIntroduction(Introduction):
+class NestedIntroduction(Introduction):
+    bound_generics = UserField(type=T.Symbol.array)
+
     @langkit_property()
     def generic_formals():
-        return No(Symbol.array)
+        return Self.term.free_symbols.filter(
+            lambda s: Not(Self.bound_generics.contains(s))
+        )
 
 
 class Definition(DependzNode):

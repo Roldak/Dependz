@@ -1089,6 +1089,44 @@ class Term(DependzNode):
             )
         )
 
+    @langkit_property(return_type=SynthesizationAttempt,
+                      dynamic_vars=[synthesis_context])
+    def construct_attempt(from_attempt=SynthesizationAttempt,
+                          from_hole=SynthesizationHole, constr=Constructor):
+
+        dom = Var(from_hole.domain_val)
+
+        atp = Var(dom.synthesize_apply(
+            constr.template.origin,
+            constr.template.instance
+        ))
+
+        substs = Var(Substitution.new(
+            from_symbol=from_hole.sym,
+            to_term=atp.term
+        ).singleton.concat(constr.substs))
+
+        holes = Var(atp.holes.concat(from_attempt.holes).filtermap(
+            lambda h: SynthesizationHole.new(
+                sym=h.sym,
+                domain_val=h.domain_val.substitute_all(substs),
+                ctx=SynthesisContext.new(
+                    intros=h.ctx.intros.map(
+                        lambda i: Self.make_introduction(
+                            name=i.ident,
+                            dom=i.term.substitute_all(substs)
+                        ).cast(Introduction)
+                    )
+                )
+            ),
+            lambda h: Not(substs.any(lambda s: s.from_symbol == h.sym))
+        ))
+
+        return SynthesizationAttempt.new(
+            term=from_attempt.term.substitute_all(substs, unsafe=True),
+            holes=holes
+        )
+
     @langkit_property(return_type=SynthesizationAttempt.array,
                       activate_tracing=True)
     def synthesize_attempt(attempt=SynthesizationAttempt,
@@ -1100,60 +1138,16 @@ class Term(DependzNode):
             ))
         ))
 
-        dom = Var(first_hole.domain_val)
-
         constrs = Var(synthesis_context.bind(
             first_hole.ctx,
             first_hole.domain_val.synthesizable_constructors(free_syms)
         ))
 
-        return synthesis_context.bind(first_hole.ctx, constrs.map(
-            lambda c: dom.synthesize_apply(
-                c.template.origin,
-                c.template.instance
-            ).then(lambda atp: Let(
-                lambda substs=Substitution.new(
-                    from_symbol=first_hole.sym,
-                    to_term=atp.term
-                ).singleton.concat(c.substs):
-
-                SynthesizationAttempt.new(
-                    term=attempt.term.substitute_all(substs, unsafe=True),
-                    holes=atp.holes.concat(attempt.holes).mapcat(
-                        lambda h: Let(lambda hole_rep=substs.find(
-                            lambda s: s.from_symbol == h.sym
-                        ): If(
-                            hole_rep.is_null,
-
-                            SynthesizationHole.new(
-                                sym=h.sym,
-                                domain_val=h.domain_val.substitute_all(substs),
-                                ctx=h.ctx
-                            ).singleton,
-
-                            c.template.new_symbols.filtermap(lambda s: Let(
-                                lambda
-                                exp_dom=h.domain_val.substitute_all(substs),
-                                ocr=hole_rep.to_term.find_occurrences(s).at(0):
-
-                                hole_rep.to_term.check_domains_internal(
-                                    exp_dom, No(Binding.array), -1
-                                ).then(
-                                    lambda _: SynthesizationHole.new(
-                                        sym=s,
-                                        domain_val=ocr._.domain_val,
-                                        ctx=h.ctx
-                                    ),
-                                    default_val=PropertyError(
-                                        SynthesizationHole,
-                                        "Could not type new hole"
-                                    )
-                                )
-                            ), lambda s: hole_rep.to_term.is_free(s))
-                        ))
-                    )
-                )
-            ))
+        return synthesis_context.bind(first_hole.ctx, constrs.mapcat(
+            lambda constr: Try(
+                Self.construct_attempt(attempt, first_hole, constr).singleton,
+                No(SynthesizationAttempt.array)
+            )
         ))
 
     @langkit_property(return_type=T.Term,

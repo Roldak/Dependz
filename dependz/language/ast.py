@@ -239,17 +239,9 @@ class DependzNode(ASTNode):
         equations = Var(query_results.logic_all(lambda r: r.eq))
         renamings = Var(query_results.mapcat(lambda r: r.renamings))
 
-        unify_eq = Var(Or(
-            equations,
-            LogicTrue()
-        ))
+        return If(
+            Try(equations.solve, allow_incomplete),
 
-        res = Var(Try(
-            unify_eq.solve._or(PropertyError(Bool, "Cannot happen")),
-            False
-        ))
-
-        substs = Var(
             symbols.map(
                 lambda s: Substitution.new(
                     from_symbol=s,
@@ -257,50 +249,9 @@ class DependzNode(ASTNode):
                         renamings
                     )
                 )
-            ).filter(lambda s: Not(s.to_term.is_null))
-        )
-        new_queries = Var(queries.map(
-            lambda q: UnifyQuery.new(
-                first=q.first.substitute_all(substs).normalize,
-                second=q.second.substitute_all(substs).normalize
-            )
-        ))
-        left_symbols = Var(symbols.filter(
-            lambda sym: Not(substs.exists(
-                lambda subst: subst.from_symbol == sym
-            ))
-        ))
-        incomplete = And(
-            left_symbols.length > 0,
-            queries.any(lambda i, old_q: Let(
-                lambda new_q=new_queries.at(i): Or(
-                    Not(old_q.first.equivalent(new_q.first)),
-                    Not(old_q.second.equivalent(new_q.second))
-                )
-            ))
-        )
-        return Cond(
-            incomplete,
-            substs.concat(
-                Self.unify_all(new_queries, left_symbols, allow_incomplete)
-            ),
+            ).filter(lambda s: Not(s.to_term.is_null)),
 
-            res | allow_incomplete,
-            Try(
-                equations.solve,
-                True
-            ).then(
-                lambda _: substs,
-                default_val=PropertyError(
-                    Substitution.array,
-                    "Unification failed (terms are not unifiable)"
-                )
-            ),
-
-            PropertyError(
-                Substitution.array,
-                "Unification failed (not all metavariables could be bound)"
-            )
+            PropertyError(Substitution.array, "Unification failed")
         )
 
 

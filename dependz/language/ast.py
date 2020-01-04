@@ -224,26 +224,24 @@ class DependzNode(ASTNode):
                   allow_incomplete=(T.Bool, False)):
         vars = Var(Self.make_logic_var_array)
 
-        def construct_equations():
-            return queries.map(
-                lambda q: unification_context.bind(
-                    UnificationContext.new(
-                        symbols=symbols,
-                        vars=vars,
-                        self_parent=No(Term),
-                        other_parent=No(Term)
-                    ),
-                    q.first.unify_equation(q.second)
-                )
+        query_results = Var(queries.map(
+            lambda q: unification_context.bind(
+                UnificationContext.new(
+                    symbols=symbols,
+                    vars=vars,
+                    self_parent=No(Term),
+                    other_parent=No(Term)
+                ),
+                q.first.unify_equation(q.second)
             )
-
-        query_results = Var(construct_equations())
-        unify_eq = Var(Or(
-            query_results.logic_all(lambda r: r.eq),
-            LogicTrue()
         ))
-        renamings = Var(query_results.mapcat(
-            lambda r: r.renamings
+
+        equations = Var(query_results.logic_all(lambda r: r.eq))
+        renamings = Var(query_results.mapcat(lambda r: r.renamings))
+
+        unify_eq = Var(Or(
+            equations,
+            LogicTrue()
         ))
 
         res = Var(Try(
@@ -289,7 +287,7 @@ class DependzNode(ASTNode):
 
             res | allow_incomplete,
             Try(
-                construct_equations().logic_all(lambda r: r.eq).solve,
+                equations.solve,
                 True
             ).then(
                 lambda _: substs,

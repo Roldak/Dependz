@@ -445,7 +445,8 @@ class Term(DependzNode):
         )
 
     @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
-                      dynamic_vars=[unification_context])
+                      dynamic_vars=[unification_context],
+                      activate_tracing=True)
     def first_order_rigid_rigid_equation(other=T.Term):
 
         def to_logic(bool):
@@ -849,8 +850,7 @@ class Term(DependzNode):
             lambda _: Self.singleton
         ))
 
-    @langkit_property(return_type=T.Constructor.array,
-                      activate_tracing=True)
+    @langkit_property(return_type=T.Constructor.array)
     def constructors_impl(constructors=T.Introduction.array,
                           generics=T.Symbol.array):
         return constructors.map(
@@ -1033,8 +1033,7 @@ class Term(DependzNode):
         )
 
     @langkit_property(return_type=SynthesizationAttempt,
-                      dynamic_vars=[synthesis_context],
-                      activate_tracing=True)
+                      dynamic_vars=[synthesis_context])
     def synthesize_apply(built=T.Term, callee_type=T.Term):
         return callee_type.match(
             lambda ar=Arrow:
@@ -1048,7 +1047,8 @@ class Term(DependzNode):
         )
 
     @langkit_property(return_type=Constructor.array,
-                      dynamic_vars=[synthesis_context])
+                      dynamic_vars=[synthesis_context],
+                      activate_tracing=True)
     def synthesizable_constructors(generics=T.Symbol.array):
         intros = Var(
             Self.unit.root.cast(Program).all_constructors
@@ -1148,8 +1148,7 @@ class Term(DependzNode):
             )
         ))
 
-    @langkit_property(return_type=T.Term,
-                      activate_tracing=True)
+    @langkit_property(return_type=T.Term)
     def synthesize_breadth_first_search(attempts=SynthesizationAttempt.array,
                                         origin=T.Introduction, depth=T.Int):
         result = Var(attempts.find(lambda atp: atp.holes.length == 0))

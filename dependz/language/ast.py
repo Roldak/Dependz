@@ -316,9 +316,11 @@ class Term(DependzNode):
         )
         second_term = Var(extraction_context.second_context.normalize)
 
-        original = Var(unification_context.vars.elem(
-            extraction_context.target
-        ).get_value._.cast_or_raise(Term))
+        original = Var(
+            unification_context.vars.elem(
+                extraction_context.target
+            ).get_value._.cast_or_raise(Term)
+        )
 
         return If(
             Not(original.is_null),
@@ -359,9 +361,24 @@ class Term(DependzNode):
 
     @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
                       dynamic_vars=[unification_context])
+    def first_order_match_match_equation(other=T.Term):
+        return Self.first_order_rigid_rigid_equation(other)
+
+    @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
+                      dynamic_vars=[unification_context])
     def first_order_match_equation(other=T.Term):
+        tmp = Var(unification_context.vars.elem(
+            Self.unique_fresh_symbol("tmp")
+        ))
         return UnifyEquation.new(
-            eq=LogicTrue(),
+            eq=And(
+                Bind(tmp, Self.as_bare_entity,
+                     conv_prop=Term.solve_time_substituted_entity,
+                     eq_prop=Term.equivalent_entities),
+                Bind(tmp, other.as_bare_entity,
+                     conv_prop=Term.solve_time_substituted_entity,
+                     eq_prop=Term.equivalent_entities)
+            ),
             renamings=No(Renaming.array)
         )
 
@@ -594,6 +611,9 @@ class Term(DependzNode):
         other_has_metavar = Var(symbols.any(lambda s: other.is_free(s)))
 
         return Cond(
+            self_is_match & other_is_match,
+            Self.first_order_match_match_equation(other),
+
             self_is_match,
             Self.first_order_match_equation(other),
 

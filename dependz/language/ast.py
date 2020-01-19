@@ -313,7 +313,7 @@ class Term(DependzNode):
 
     @langkit_property(return_type=T.Bool,
                       dynamic_vars=[unification_context],
-                      activate_tracing=True)
+                      activate_tracing=False)
     def unifies_with(other=T.Term):
         current_self = Var(Self.solve_time_substitution.normalize)
         current_other = Var(other.solve_time_substitution.normalize)
@@ -330,7 +330,7 @@ class Term(DependzNode):
 
     @langkit_property(return_type=T.Term.entity,
                       dynamic_vars=[unification_context, extraction_context],
-                      activate_tracing=True)
+                      activate_tracing=False)
     def extract_value():
         first_term = Var(
             extraction_context.first_context.solve_time_substitution.normalize
@@ -467,7 +467,7 @@ class Term(DependzNode):
 
     @langkit_property(return_type=UnifyEquation, uses_entity_info=False,
                       dynamic_vars=[unification_context],
-                      activate_tracing=True)
+                      activate_tracing=False)
     def first_order_rigid_rigid_equation(other=T.Term):
 
         def to_logic(bool):
@@ -663,7 +663,7 @@ class Term(DependzNode):
     @langkit_property(return_type=T.Bool,
                       dynamic_vars=[unification_context,
                                     ho_unification_context],
-                      activate_tracing=True)
+                      activate_tracing=False)
     def higher_order_check_current_solution():
         return Entity.make_apply(
             Self,
@@ -702,7 +702,7 @@ class Term(DependzNode):
         ).as_bare_entity
 
     @langkit_property(return_type=T.UnifyEquation,
-                      activate_tracing=True,
+                      activate_tracing=False,
                       dynamic_vars=[unification_context])
     def higher_order_single_arg_equation(arg=T.Term, res=T.Term,
                                          ho_sym=T.Symbol):
@@ -886,7 +886,9 @@ class Term(DependzNode):
 
     @langkit_property(return_type=T.Constructor.array)
     def constructors_impl(constructors=T.Introduction.array,
-                          generics=T.Symbol.array):
+                          generics=T.Symbol.array,
+                          domain_constraints=(UnifyQuery.array,
+                                              No(UnifyQuery.array))):
         return constructors.map(
             lambda c: c.as_template(c.ident)
         ).mapcat(
@@ -895,8 +897,9 @@ class Term(DependzNode):
 
                 Try(
                     Let(
-                        lambda substs=inst.unify(
-                            Self,
+                        lambda substs=Self.unify_with_constraints(
+                            inst,
+                            domain_constraints,
                             c.new_symbols.concat(generics),
                             allow_incomplete=True
                         ):
@@ -939,9 +942,11 @@ class Term(DependzNode):
 
     @langkit_property(return_type=T.Constructor.array.array)
     def grouped_constructors(constructors=T.Introduction.array,
-                             generics=T.Symbol.array):
+                             generics=T.Symbol.array,
+                             domain_constraints=UnifyQuery.array):
         return Self.grouped_constructors_impl(
-            Self.constructors_impl(constructors, generics), 0
+            Self.constructors_impl(constructors, generics, domain_constraints),
+            0
         )
 
     @langkit_property(public=True, return_type=T.Term.entity.array)
@@ -1083,13 +1088,16 @@ class Term(DependzNode):
     @langkit_property(return_type=Constructor.array,
                       dynamic_vars=[synthesis_context],
                       activate_tracing=True)
-    def synthesizable_constructors(generics=T.Symbol.array):
+    def synthesizable_constructors(generics=T.Symbol.array,
+                                   domain_constraints=UnifyQuery.array):
         intros = Var(
             Self.unit.root.cast(Program).all_constructors
             .concat(synthesis_context.intros)
         )
 
-        return Self.grouped_constructors(intros, generics).mapcat(
+        return Self.grouped_constructors(
+            intros, generics, domain_constraints
+        ).mapcat(
             lambda constrs: constrs
         )
 
@@ -1232,9 +1240,23 @@ class Term(DependzNode):
             attempt.holes.map(lambda h: h.sym).concat(attempt.free_symbols)
         )
 
+        hole_constraints = Var(
+            attempt.holes.filter(
+                lambda h: first_hole.domain_val.is_free(h.sym)
+            ).map(
+                lambda h: UnifyQuery.new(
+                    first=Self.make_ident(h.sym),
+                    second=h.domain_val
+                )
+            )
+        )
+
         constrs = Var(synthesis_context.bind(
             first_hole.ctx,
-            first_hole.domain_val.synthesizable_constructors(free_syms)
+            first_hole.domain_val.synthesizable_constructors(
+                free_syms,
+                hole_constraints
+            )
         ))
 
         return synthesis_context.bind(first_hole.ctx, constrs.mapcat(

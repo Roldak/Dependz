@@ -1082,8 +1082,72 @@ class Term(DependzNode):
             )
         )
 
+    @langkit_property(return_type=SynthesizationHole.array)
+    def updated_hole_set(original_holes=SynthesizationHole.array,
+                         substs=T.Substitution.array,
+                         potential_emerging_holes=T.Identifier.array,
+                         index=(T.Int, 0)):
+        h = Var(original_holes.at(index))
+
+        subst = Var(substs.find(lambda s: s.from_symbol == h.sym))
+        is_replaced = Var(Not(subst.is_null))
+
+        emerging_holes = Var(If(
+            is_replaced,
+            potential_emerging_holes.filter(
+                lambda id: subst.to_term.is_free(id.sym)
+            ),
+            No(T.Identifier.array),
+        ))
+
+        rest_potential_emerging_holes = Var(potential_emerging_holes.filter(
+            lambda h: Not(emerging_holes.contains(h))
+        ))
+
+        updated_ctx = Var(SynthesisContext.new(
+            intros=h.ctx.intros.map(
+                lambda i: Self.make_nested_intro(
+                    name=i.ident,
+                    dom=i.term.substitute_all(substs),
+                    bound_generics=h.ctx.bound_generics
+                ).cast(Introduction)
+            ),
+            bound_generics=h.ctx.bound_generics
+        ))
+
+        return Cond(
+            Not(is_replaced),
+
+            SynthesizationHole.new(
+                sym=h.sym,
+                domain_val=h.domain_val.substitute_all(substs),
+                ctx=updated_ctx
+            ).singleton,
+
+            emerging_holes.length > 0,
+            emerging_holes.map(
+                lambda id: SynthesizationHole.new(
+                    sym=id.sym,
+                    domain_val=id.domain_val,
+                    ctx=updated_ctx
+                )
+            ),
+
+            No(SynthesizationHole.array)
+        ).concat(If(
+            index == original_holes.length - 1,
+            No(SynthesizationHole.array),
+            Self.updated_hole_set(
+                original_holes,
+                substs,
+                rest_potential_emerging_holes,
+                index + 1
+            )
+        ))
+
     @langkit_property(return_type=SynthesizationAttempt,
-                      dynamic_vars=[synthesis_context])
+                      dynamic_vars=[synthesis_context],
+                      activate_tracing=True)
     def construct_attempt(from_attempt=SynthesizationAttempt,
                           from_hole=SynthesizationHole, constr=Constructor):
 
@@ -1099,31 +1163,29 @@ class Term(DependzNode):
             to_term=atp.term
         ).singleton.concat(constr.substs))
 
-        holes = Var(atp.holes.concat(from_attempt.holes).filtermap(
-            lambda h: SynthesizationHole.new(
-                sym=h.sym,
-                domain_val=h.domain_val.substitute_all(substs),
-                ctx=SynthesisContext.new(
-                    intros=h.ctx.intros.map(
-                        lambda i: Self.make_nested_intro(
-                            name=i.ident,
-                            dom=i.term.substitute_all(substs),
-                            bound_generics=h.ctx.bound_generics
-                        ).cast(Introduction)
-                    ),
-                    bound_generics=h.ctx.bound_generics
+        updated_holes = Var(Self.updated_hole_set(
+            atp.holes.concat(from_attempt.holes),
+            substs,
+            constr.template.new_symbols.mapcat(
+                lambda s: Self.make_ident(s).then(
+                    lambda id: If(
+                        Not(id.domain_val.is_null),
+                        id.cast(Identifier).singleton,
+                        No(Identifier.array)
+                    )
                 )
-            ),
-            lambda h: Not(substs.any(lambda s: s.from_symbol == h.sym))
+            )
         ))
 
         return SynthesizationAttempt.new(
             term=from_attempt.term.substitute_all(substs, unsafe=True),
-            holes=holes,
+            holes=updated_holes,
             free_symbols=from_attempt.free_symbols.filter(
                 lambda sym: Not(substs.any(lambda s: s.from_symbol == sym))
             ).concat(
-                constr.template.new_symbols
+                constr.template.new_symbols.filter(
+                    lambda s: Not(updated_holes.any(lambda h: h.sym == s))
+                )
             )
         )
 

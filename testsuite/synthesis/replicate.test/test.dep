@@ -1,0 +1,27 @@
+Type : Type
+Nat : Type
+Z : Nat
+S : Nat -> Nat
+
+Eq : a -> b -> Type
+Refl : Eq x x
+
+Vec : Type -> Nat -> Type
+Nil : Vec t Z
+Cons : x:t -> xs:Vec t n -> Vec t (S n)
+
+ForAll : (t -> Type) -> Vec t n -> Type
+ForZero : ForAll P Nil
+ForMore : ForAll P xs -> P x -> ForAll P (Cons x xs)
+
+Pair : Type -> Type -> Type
+PMake : a -> b -> Pair a b
+
+DPair : a:t -> P : (a -> q) -> Type
+DPMake : x:a -> P x -> DPair a P
+
+test_fixed_1 : n:Nat -> DPair (Vec Nat Z) (ForAll (Eq n))
+test_fixed_1 = hole
+
+test_fixed_2 : n:Nat -> DPair (Vec Nat (S (S (S (S Z))))) (ForAll (Eq n))
+test_fixed_2 = hole

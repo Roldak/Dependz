@@ -1,0 +1,4 @@
+test_fixed_1: Success
+  test_fixed_1 = (\n. ((DPMake Nil) ForZero))
+test_fixed_2: Success
+  test_fixed_2 = (\n. ((DPMake ((Cons n) ((Cons n) ((Cons n) ((Cons n) Nil))))) ((ForMore ((ForMore ((ForMore ((ForMore ForZero) Refl)) Refl)) Refl)) Refl)))

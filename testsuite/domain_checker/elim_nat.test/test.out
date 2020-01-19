@@ -31,9 +31,9 @@ test_elim_3: Success
   <SourceId test.dep:24:37-24:40>: Type
   <SourceId test.dep:24:41-24:42>: Nat
 test_elim_4: Success
-  <Apply test.dep:27:15-27:37>: (n:Nat -> ((match (((case Z) Nat) ((case S) (Vec Nat)))) n))
-  <Apply test.dep:27:15-27:25>: ((k:Nat -> ((Vec Nat) k)) -> (n:Nat -> ((match (((case Z) Nat) ((case S) (Vec Nat)))) n)))
-  <SourceId test.dep:27:15-27:23>: (Nat -> ((k:Nat -> ((Vec Nat) k)) -> (n:Nat -> ((match (((case Z) Nat) ((case S) (Vec Nat)))) n))))
+  <Apply test.dep:27:15-27:37>: (n:Nat -> (((elim_nat Nat) (Vec Nat)) n))
+  <Apply test.dep:27:15-27:25>: ((k:Nat -> ((Vec Nat) k)) -> (n:Nat -> (((elim_nat Nat) (Vec Nat)) n)))
+  <SourceId test.dep:27:15-27:23>: (Nat -> ((k:Nat -> ((Vec Nat) k)) -> (n:Nat -> (((elim_nat Nat) (Vec Nat)) n))))
   <SourceId test.dep:27:24-27:25>: Nat
   <SourceId test.dep:27:26-27:37>: (k:Nat -> ((Vec Nat) k))
 test_elim_5_a: Success
@@ -47,9 +47,9 @@ test_elim_5_b: Success
   <SourceId test.dep:33:30-33:31>: (Nat -> Nat)
   <SourceId test.dep:33:32-33:33>: Nat
 test_elim_6: Success
-  <Apply test.dep:36:15-36:35>: (n:Nat -> ((match (((case Z) Nat) ((case S) (\x. ((Vec ((Vec Nat) x)) Z))))) n))
-  <Apply test.dep:36:15-36:25>: ((k:Nat -> ((Vec ((Vec Nat) k)) Z)) -> (n:Nat -> ((match (((case Z) Nat) ((case S) (\x. ((Vec ((Vec Nat) x)) Z))))) n)))
-  <SourceId test.dep:36:15-36:23>: (Nat -> ((k:Nat -> ((Vec ((Vec Nat) k)) Z)) -> (n:Nat -> ((match (((case Z) Nat) ((case S) (\x. ((Vec ((Vec Nat) x)) Z))))) n))))
+  <Apply test.dep:36:15-36:35>: (n:Nat -> (((elim_nat Nat) (\x. ((Vec ((Vec Nat) x)) Z))) n))
+  <Apply test.dep:36:15-36:25>: ((k:Nat -> ((Vec ((Vec Nat) k)) Z)) -> (n:Nat -> (((elim_nat Nat) (\x. ((Vec ((Vec Nat) x)) Z))) n)))
+  <SourceId test.dep:36:15-36:23>: (Nat -> ((k:Nat -> ((Vec ((Vec Nat) k)) Z)) -> (n:Nat -> (((elim_nat Nat) (\x. ((Vec ((Vec Nat) x)) Z))) n))))
   <SourceId test.dep:36:24-36:25>: Nat
   <Abstraction test.dep:36:27-36:34>: (k:Nat -> ((Vec ((Vec Nat) k)) Z))
   <SourceId test.dep:36:28-36:29>: Nat

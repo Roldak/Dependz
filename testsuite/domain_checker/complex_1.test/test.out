@@ -1,14 +1,14 @@
 test_1: Success
-  <Apply test.dep:19:10-19:53>: (a:Nat -> ((match (((case Z) A) ((case S) (match (((case Z) B) ((case S) (\c. C))))))) a))
-  <Apply test.dep:19:10-19:22>: ((k:Nat -> ((match (((case Z) B) ((case S) (\c. C)))) k)) -> (a:Nat -> ((match (((case Z) A) ((case S) (match (((case Z) B) ((case S) (\c. C))))))) a)))
-  <SourceId test.dep:19:10-19:18>: (A -> ((k:Nat -> ((match (((case Z) B) ((case S) (\c. C)))) k)) -> (a:Nat -> ((match (((case Z) A) ((case S) (match (((case Z) B) ((case S) (\c. C))))))) a))))
+  <Apply test.dep:19:10-19:53>: (a:Nat -> (((elim_nat A) (\b. (((elim_nat B) (\c. C)) b))) a))
+  <Apply test.dep:19:10-19:22>: ((k:Nat -> ((\b. (((elim_nat B) (\c. C)) b)) k)) -> (a:Nat -> (((elim_nat A) (\b. (((elim_nat B) (\c. C)) b))) a)))
+  <SourceId test.dep:19:10-19:18>: (A -> ((k:Nat -> ((\b. (((elim_nat B) (\c. C)) b)) k)) -> (a:Nat -> (((elim_nat A) (\b. (((elim_nat B) (\c. C)) b))) a))))
   <SourceId test.dep:19:19-19:22>: A
-  <Abstraction test.dep:19:24-19:52>: (k:Nat -> ((match (((case Z) B) ((case S) (\c. C)))) k))
+  <Abstraction test.dep:19:24-19:52>: (k:Nat -> ((\b. (((elim_nat B) (\c. C)) b)) k))
   <SourceId test.dep:19:25-19:26>: Nat
-  <Apply test.dep:19:28-19:52>: ((match (((case Z) B) ((case S) (\c. C)))) k)
-  <Apply test.dep:19:28-19:50>: (k:Nat -> ((match (((case Z) B) ((case S) (\c. C)))) k))
-  <Apply test.dep:19:28-19:40>: ((Nat -> C) -> (k:Nat -> ((match (((case Z) B) ((case S) (\c. C)))) k)))
-  <SourceId test.dep:19:28-19:36>: (B -> ((Nat -> C) -> (k:Nat -> ((match (((case Z) B) ((case S) (\c. C)))) k))))
+  <Apply test.dep:19:28-19:52>: ((\b. (((elim_nat B) (\c. C)) b)) k)
+  <Apply test.dep:19:28-19:50>: (k:Nat -> ((\b. (((elim_nat B) (\c. C)) b)) k))
+  <Apply test.dep:19:28-19:40>: ((Nat -> C) -> (k:Nat -> ((\b. (((elim_nat B) (\c. C)) b)) k)))
+  <SourceId test.dep:19:28-19:36>: (B -> ((Nat -> C) -> (k:Nat -> ((\b. (((elim_nat B) (\c. C)) b)) k))))
   <SourceId test.dep:19:37-19:40>: B
   <Abstraction test.dep:19:42-19:49>: (Nat -> C)
   <SourceId test.dep:19:43-19:44>: Nat

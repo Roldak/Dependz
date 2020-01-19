@@ -29,12 +29,12 @@ test_dpair_2: Success
   <SourceId test.dep:23:33-23:34>: Nat
   <SourceId test.dep:23:35-23:38>: ((Vec Nat) Z)
 test_dpair_3: Success
-  <Abstraction test.dep:36:16-36:39>: (b:Bool -> ((DPair Bool) (\n. ((Eq n) ((match (((case True) False) ((case False) True))) b)))))
+  <Abstraction test.dep:36:16-36:39>: (b:Bool -> ((DPair Bool) (\n. ((Eq n) (not b)))))
   <SourceId test.dep:36:17-36:18>: Bool
-  <Apply test.dep:36:20-36:39>: ((DPair Bool) (\n. ((Eq n) ((match (((case True) False) ((case False) True))) b))))
-  <Apply test.dep:36:20-36:34>: (((Eq ((match (((case True) False) ((case False) True))) b)) ((match (((case True) False) ((case False) True))) b)) -> ((DPair Bool) (\n. ((Eq n) ((match (((case True) False) ((case False) True))) b)))))
-  <SourceId test.dep:36:20-36:26>: (((match (((case True) False) ((case False) True))) b):Bool -> (((Eq ((match (((case True) False) ((case False) True))) b)) ((match (((case True) False) ((case False) True))) b)) -> ((DPair Bool) (\n. ((Eq n) ((match (((case True) False) ((case False) True))) b))))))
+  <Apply test.dep:36:20-36:39>: ((DPair Bool) (\n. ((Eq n) (not b))))
+  <Apply test.dep:36:20-36:34>: (((Eq (not b)) (not b)) -> ((DPair Bool) (\n. ((Eq n) (not b)))))
+  <SourceId test.dep:36:20-36:26>: ((not b):Bool -> (((Eq (not b)) (not b)) -> ((DPair Bool) (\n. ((Eq n) (not b))))))
   <Apply test.dep:36:28-36:33>: Bool
   <SourceId test.dep:36:28-36:31>: (Bool -> Bool)
   <SourceId test.dep:36:32-36:33>: Bool
-  <SourceId test.dep:36:35-36:39>: ((Eq ((match (((case True) False) ((case False) True))) b)) ((match (((case True) False) ((case False) True))) b))
+  <SourceId test.dep:36:35-36:39>: ((Eq (not b)) (not b))

@@ -1,2 +1,2 @@
 test_1: Success
-  test_1 = (\b. ((DPMake ((match (((case True) False) ((case False) True))) b)) Refl))
+  test_1 = (\b. ((DPMake (not b)) Refl))

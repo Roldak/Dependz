@@ -1516,10 +1516,14 @@ class Term(DependzNode):
     @langkit_property(public=True, return_type=T.Term, memoized=True)
     def normalize():
         evaled = Var(Self.eval)
-        to_norm = Var(If(
+        to_norm = Var(Cond(
             # prevent infinite evaluation
             evaled.contains_term(Self),
             Self,
+
+            Not(Self.is_free("match")) & evaled.is_free("match"),
+            Self,
+
             evaled
         ))
 

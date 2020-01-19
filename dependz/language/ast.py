@@ -218,25 +218,38 @@ class DependzNode(ASTNode):
     def dump_mmz_map():
         pass
 
-    @langkit_property(public=True, return_type=Substitution.array,
+    @langkit_property(return_type=Substitution.array,
                       activate_tracing=True)
-    def unify_all(queries=UnifyQuery.array, symbols=T.Symbol.array,
-                  allow_incomplete=(T.Bool, False)):
+    def unify_all_with_constraints(queries=UnifyQuery.array,
+                                   domain_constraints=UnifyQuery.array,
+                                   symbols=T.Symbol.array,
+                                   allow_incomplete=(T.Bool, False)):
         vars = Var(Self.make_logic_var_array)
+        ctx = Var(UnificationContext.new(
+            symbols=symbols,
+            vars=vars,
+            self_parent=No(Term),
+            other_parent=No(Term)
+        ))
 
         query_results = Var(queries.map(
             lambda q: unification_context.bind(
-                UnificationContext.new(
-                    symbols=symbols,
-                    vars=vars,
-                    self_parent=No(Term),
-                    other_parent=No(Term)
-                ),
+                ctx,
                 q.first.unify_equation(q.second)
             )
         ))
 
-        equations = Var(query_results.logic_all(lambda r: r.eq))
+        equations = Var(And(
+            query_results.logic_all(lambda r: r.eq),
+
+            unification_context.bind(
+                ctx,
+                domain_constraints.logic_all(
+                    lambda q: q.first.has_domain_equation(q.second)
+                )
+            )
+
+        ))
         renamings = Var(query_results.mapcat(lambda r: r.renamings))
 
         return If(
@@ -252,6 +265,14 @@ class DependzNode(ASTNode):
             ).filter(lambda s: Not(s.to_term.is_null)),
 
             PropertyError(Substitution.array, "Unification failed")
+        )
+
+    @langkit_property(public=True, return_type=Substitution.array,
+                      activate_tracing=False)
+    def unify_all(queries=UnifyQuery.array, symbols=T.Symbol.array,
+                  allow_incomplete=(T.Bool, False)):
+        return Self.unify_all_with_constraints(
+            queries, No(UnifyQuery.array), symbols, allow_incomplete
         )
 
 
@@ -798,13 +819,26 @@ class Term(DependzNode):
             renamings=unify_eqs.mapcat(lambda eq: eq.renamings)
         )
 
+    @langkit_property(return_type=Substitution.array)
+    def unify_with_constraints(other=T.Term,
+                               domain_constraints=UnifyQuery.array,
+                               symbols=T.Symbol.array,
+                               allow_incomplete=(T.Bool, False)):
+        return Self.unify_all_with_constraints(
+            UnifyQuery.new(first=Self, second=other).singleton,
+            domain_constraints,
+            symbols,
+            allow_incomplete
+        )
+
     @langkit_property(public=True, return_type=Substitution.array)
     def unify(other=T.Term, symbols=T.Symbol.array,
               allow_incomplete=(T.Bool, False)):
-        return Self.unify_all(UnifyQuery.new(
-            first=Self,
-            second=other
-        ).singleton, symbols, allow_incomplete)
+        return Self.unify_all(
+            UnifyQuery.new(first=Self, second=other).singleton,
+            symbols,
+            allow_incomplete
+        )
 
     @langkit_property(return_type=T.Term, memoized=True)
     def final_result_domain():
@@ -1672,6 +1706,23 @@ class Term(DependzNode):
             .concat(ar.binder._.find_occurrences(sym))
         )
 
+    @langkit_property(return_type=T.Term.array)
+    def flat_terms():
+        return Self.singleton.concat(Self.match(
+            lambda ap=Apply:
+            ap.lhs.flat_terms.concat(ap.rhs.flat_terms),
+
+            lambda ab=Abstraction:
+            ab.ident.flat_terms.concat(ab.term.flat_terms),
+
+            lambda ar=Arrow:
+            ar.lhs.flat_terms
+            .concat(ar.rhs.flat_terms)
+            .concat(ar.binder._.flat_terms),
+
+            lambda _: No(Term.array)
+        ))
+
     @langkit_property(return_type=T.DomainEquation,
                       uses_entity_info=False,
                       activate_tracing=True)
@@ -2074,6 +2125,12 @@ class Term(DependzNode):
             default_val=templated_result
         )
 
+    @langkit_property(return_type=Bool)
+    def reset_domain_vars():
+        return Self.flat_terms.logic_all(
+            lambda x: Bind(x.domain_var, No(Term.entity))
+        ).solve
+
     @langkit_property(public=False, return_type=T.Bool)
     def check_domains_internal(expected_domain=T.Term,
                                bindings=Binding.array, tries=T.Int):
@@ -2124,6 +2181,34 @@ class Term(DependzNode):
                 ))
             )),
             default_val=domain_eq.solve
+        )
+
+    @langkit_property(return_type=T.Bool, activate_tracing=True,
+                      dynamic_vars=[unification_context])
+    def has_domain(domain_val=T.Term.entity):
+        constrained_term = Var(Self.solve_time_substitution)
+        domain_term = Var(domain_val.node.solve_time_substitution)
+
+        ignore(Var(constrained_term.reset_domain_vars))
+
+        return Try(
+            constrained_term.check_domains_internal(
+                domain_term, No(Binding.array), -1
+            ),
+            False
+        )
+
+    @langkit_property(return_type=T.Equation,
+                      dynamic_vars=[unification_context])
+    def has_domain_equation(other=T.Term):
+        # Use the fact that predicates with more than 1 var are evaluated last
+        vars = Var(unification_context.vars)
+        term_var = Var(vars.elem(Self.unique_fresh_symbol("$tmp_trm")))
+        domain_var = Var(vars.elem(Self.unique_fresh_symbol("$tmp_dom")))
+        return And(
+            Bind(term_var, Self.as_bare_entity),
+            Bind(domain_var, other.as_bare_entity),
+            Predicate(Term.has_domain, term_var, domain_var)
         )
 
     @langkit_property(return_type=T.Term, public=True)
